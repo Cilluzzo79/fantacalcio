@@ -64,3 +64,31 @@ def test_report_scrive_dubbi(tmp_path):
     out = tmp_path / "report.csv"
     matching.write_report(df, out)
     assert "Sconosciuto" in out.read_text(encoding="utf-8")
+
+
+def test_ambiguous_surname_collision():
+    """Regression: same-team surname collisions (e.g. 'Rossi' vs 'Giacomo Rossi' and 'Danilo De Rossi')
+    should be downgraded to 'dubbio' and appear in report."""
+    ambig_index = {"Roma": [{"sofaId": 4, "nome": "Giacomo Rossi"},
+                             {"sofaId": 5, "nome": "Danilo De Rossi"}]}
+    df = matching.match_players(_listone([[20, "Rossi", "D", "Roma", 5, 10]]),
+                                ambig_index, {})
+    assert df.iloc[0].match_status == "dubbio"
+    # Verify it appears in report
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        from pathlib import Path
+        out = Path(tmp) / "report.csv"
+        matching.write_report(df, out)
+        assert "Rossi" in out.read_text(encoding="utf-8")
+
+
+def test_unambiguous_subset_stays_exact():
+    """Regression: unambiguous subset matches (e.g. 'Barella' vs 'Nicolò Barella' alone)
+    should still get status 'exact'."""
+    unambig_index = {"Inter": [{"sofaId": 1, "nome": "Nicolò Barella"},
+                                {"sofaId": 10, "nome": "Marco Verratti"},
+                                {"sofaId": 11, "nome": "Alessandro Bastoni"}]}
+    df = matching.match_players(_listone([[21, "Barella", "C", "Inter", 28, 120]]),
+                                unambig_index, {})
+    assert df.iloc[0].match_status == "exact"
