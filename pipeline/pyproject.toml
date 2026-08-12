@@ -1,0 +1,20 @@
+[project]
+name = "fantapipe"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+  "pandas>=2.2",
+  "openpyxl>=3.1",
+  "rapidfuzz>=3.9",
+  "requests>=2.32",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "responses>=0.25"]
+
+[tool.setuptools]
+packages = ["fantapipe"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
