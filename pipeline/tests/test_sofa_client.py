@@ -53,3 +53,45 @@ def test_search_team_returns_first_team_id(monkeypatch):
 def test_search_team_none_when_missing(monkeypatch):
     monkeypatch.setattr(sofa_client, "run_cli", lambda args: {"results": []})
     assert sofa_client.search_team("Sconosciuta") is None
+
+
+def test_get_player_unwraps_player_envelope(monkeypatch):
+    # Shape reale: {"meta": {...}, "results": {"player": {...}}}
+    payload = {"meta": {"source": "live"},
+               "results": {"player": {"id": 363856, "name": "Nicolo Barella", "position": "M"}}}
+    monkeypatch.setattr(sofa_client, "run_cli", lambda args: payload)
+    player = sofa_client.get_player(363856)
+    assert player == {"id": 363856, "name": "Nicolo Barella", "position": "M"}
+
+
+def test_get_player_raises_on_unexpected_shape(monkeypatch):
+    # results presente ma senza la chiave "player": non deve restituire
+    # silenziosamente l'intero envelope come se fosse il player.
+    monkeypatch.setattr(sofa_client, "run_cli", lambda args: {"results": {"oops": {}}})
+    with pytest.raises(SofaCliError):
+        sofa_client.get_player(363856)
+
+
+def test_get_player_raises_when_results_missing(monkeypatch):
+    # Nessuna chiave "results" affatto.
+    monkeypatch.setattr(sofa_client, "run_cli", lambda args: {"unexpected": True})
+    with pytest.raises(SofaCliError):
+        sofa_client.get_player(363856)
+
+
+def test_get_player_seasons_unwraps_unique_tournament_seasons(monkeypatch):
+    # Shape reale: {"meta": {...}, "results": {"typesMap": {...},
+    # "uniqueTournamentSeasons": [{"uniqueTournament": {...}, "seasons": [...]}]}}
+    seasons = [{"uniqueTournament": {"id": 23, "name": "Serie A"},
+                "seasons": [{"id": 76457, "year": "25/26"}]}]
+    payload = {"meta": {"source": "live"},
+               "results": {"typesMap": {}, "uniqueTournamentSeasons": seasons}}
+    monkeypatch.setattr(sofa_client, "run_cli", lambda args: payload)
+    assert sofa_client.get_player_seasons(363856) == seasons
+
+
+def test_get_player_seasons_raises_on_unexpected_shape(monkeypatch):
+    # results presente ma senza "uniqueTournamentSeasons".
+    monkeypatch.setattr(sofa_client, "run_cli", lambda args: {"results": {"typesMap": {}}})
+    with pytest.raises(SofaCliError):
+        sofa_client.get_player_seasons(363856)

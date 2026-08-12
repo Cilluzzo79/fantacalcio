@@ -64,23 +64,33 @@ def search_team(name: str) -> int | None:
 
 def get_player(player_id: int) -> dict:
     # Shape reale: {"meta": {...}, "results": {"player": {...}}}
-    data = run_cli(_cmd_player(player_id))
-    if isinstance(data, dict):
-        results = data.get("results", data)
-        if isinstance(results, dict):
-            return results.get("player", results)
-        return results
-    return data
+    cmd = _cmd_player(player_id)
+    data = run_cli(cmd)
+    results = data.get("results") if isinstance(data, dict) else None
+    if not isinstance(results, dict) or "player" not in results:
+        raise SofaCliError(
+            cmd, 0,
+            f"unexpected response shape for get_player({player_id}): "
+            f"expected results.player, got top-level keys "
+            f"{list(data.keys()) if isinstance(data, dict) else type(data).__name__}",
+        )
+    return results["player"]
 
 
 def get_player_seasons(player_id: int) -> list[dict]:
     # Shape reale: {"meta": {...}, "results": {"typesMap": {...},
     # "uniqueTournamentSeasons": [{"uniqueTournament": {...}, "seasons": [...]}]}}
-    data = run_cli(_cmd_player_seasons(player_id))
-    results = data.get("results", data) if isinstance(data, dict) else data
-    if isinstance(results, dict):
-        return results.get("uniqueTournamentSeasons", [])
-    return results
+    cmd = _cmd_player_seasons(player_id)
+    data = run_cli(cmd)
+    results = data.get("results") if isinstance(data, dict) else None
+    if not isinstance(results, dict) or "uniqueTournamentSeasons" not in results:
+        raise SofaCliError(
+            cmd, 0,
+            f"unexpected response shape for get_player_seasons({player_id}): "
+            f"expected results.uniqueTournamentSeasons, got top-level keys "
+            f"{list(data.keys()) if isinstance(data, dict) else type(data).__name__}",
+        )
+    return results["uniqueTournamentSeasons"]
 
 
 def get_player_season_stats(player_id: int, ut_id: int, season_id: int) -> dict:
