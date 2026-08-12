@@ -13,12 +13,19 @@ class ListoneError(Exception):
 
 
 def _find_header_row(raw: pd.DataFrame) -> int | None:
+    # First pass: look for a row containing {"id", "r", "nome"} subset (content-based)
+    for i in range(min(5, len(raw))):
+        cells = {str(c).strip().lower() for c in raw.iloc[i].tolist()}
+        if {"id", "r", "nome"} <= cells:
+            return i
+
+    # Second pass: look for first row with 3+ non-empty cells (structural fallback)
     for i in range(min(5, len(raw))):
         cells = [str(c).strip().lower() for c in raw.iloc[i].tolist()]
         non_empty = [c for c in cells if c and c != 'nan']
-        # First row with multiple non-empty cells is likely the header
         if len(non_empty) >= 3:
             return i
+
     return None
 
 

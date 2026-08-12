@@ -51,3 +51,34 @@ def test_colonne_mancanti_errore_esplicito(tmp_path):
     with pytest.raises(ListoneError) as e:
         load_listone(f)
     assert "Codice" in str(e.value)  # elenca le colonne trovate
+
+
+def test_header_con_metadata_row_intervallata(tmp_path):
+    """Header at row 3 with intervening multi-cell metadata row (content pass should find real header)"""
+    f = tmp_path / "quot.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["Quotazioni Fantacalcio - Stagione 2026-27"])
+    ws.append(["Aggiornato al", "12/08/2026", "ore 10:00"])  # 3-cell metadata row
+    ws.append(["Id", "R", "Nome", "Squadra", "Qt.A", "FVM"])  # real header at row 2
+    ws.append([1, "A", "Kean", "Fiorentina", 20, 80])  # data
+    wb.save(f)
+    df = load_listone(f)
+    assert len(df) == 1 and df.iloc[0].nome == "Kean"
+
+
+def test_header_non_trovato_sparse(tmp_path):
+    """Header not found: sparse data (fewer than 3 non-empty cells per row) and no id/r/nome"""
+    f = tmp_path / "quot.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["Titolo"])
+    ws.append(["Col1"])
+    ws.append(["Col2"])
+    ws.append(["Value1"])
+    ws.append(["Value2"])
+    ws.append(["Value3"])
+    wb.save(f)
+    with pytest.raises(ListoneError) as e:
+        load_listone(f)
+    assert "Header non trovato" in str(e.value)
