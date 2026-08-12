@@ -1,7 +1,0 @@
-README.md
-pyproject.toml
-fantapipe.egg-info/PKG-INFO
-fantapipe.egg-info/SOURCES.txt
-fantapipe.egg-info/dependency_links.txt
-fantapipe.egg-info/requires.txt
-fantapipe.egg-info/top_level.txt
