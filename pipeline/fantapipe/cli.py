@@ -59,6 +59,9 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
                        listone_path.name, now_iso)
     problems = validate_dataset(ds)
     if problems:
+        log.append("dataset non valido:\n" + "\n".join(problems))
+        data_dir.mkdir(parents=True, exist_ok=True)
+        (data_dir / "run_log.txt").write_text("\n".join(log), encoding="utf-8")
         raise SystemExit("dataset non valido:\n" + "\n".join(problems))
     write_dataset(ds, out_path)
     log.append(f"dataset scritto: {out_path} ({len(ds['players'])} giocatori)")
