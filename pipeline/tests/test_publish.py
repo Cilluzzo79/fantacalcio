@@ -46,3 +46,21 @@ def test_publish_push_fallito(repo_con_remote):
                                                            encoding="utf-8")
     with pytest.raises(PublishError):
         publish_dataset(repo_con_remote)
+
+
+def test_publish_commit_scoped_to_dataset(repo_con_remote):
+    # Un file estraneo gia' in staging (es. modifiche non correlate lasciate
+    # a meta' lavoro) non deve finire nel commit di pubblicazione: publish
+    # deve limitarsi al dataset.
+    unrelated = repo_con_remote / "unrelated.txt"
+    unrelated.write_text("scratch", encoding="utf-8")
+    _git(repo_con_remote, "add", "unrelated.txt")
+    (repo_con_remote / "data" / "dataset.json").write_text('{"v":4}',
+                                                           encoding="utf-8")
+    assert publish_dataset(repo_con_remote) is True
+    files = _git(repo_con_remote, "show", "--name-only",
+                 "--format=", "origin/master").stdout.split()
+    assert "unrelated.txt" not in files
+    assert "data/dataset.json" in files
+    status = _git(repo_con_remote, "status", "--porcelain").stdout
+    assert "unrelated.txt" in status  # rimasto staged/untracked in locale

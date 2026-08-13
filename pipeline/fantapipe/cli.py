@@ -46,6 +46,15 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
             log.append(f"carriera fallita per sofaId={sofa_id}: {e}")
             careers[int(sofa_id)] = []
 
+    with_seasons = sum(1 for v in careers.values() if v)
+    match_rate = n_ok / max(1, len(matched))
+    season_rate = with_seasons / max(1, len(matched))
+    log.append(f"carriere: {with_seasons}/{len(careers)} con almeno una stagione")
+    if publish and (match_rate < 0.70 or season_rate < 0.60):
+        publish = False
+        log.append(f"publish SALTATO: copertura anomala (match {match_rate:.0%}, "
+                   f"carriere {season_rate:.0%})")
+
     ds = build_dataset(matched, careers, _season_label(now.date()),
                        listone_path.name, now_iso)
     problems = validate_dataset(ds)

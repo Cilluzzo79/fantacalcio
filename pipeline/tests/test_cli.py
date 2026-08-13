@@ -1,5 +1,7 @@
 import json
+import pytest
 from openpyxl import Workbook
+import fantapipe.publish
 from fantapipe.cli import run_pipeline
 
 
@@ -47,3 +49,27 @@ def test_run_pipeline_end_to_end(tmp_path):
     assert loaded["generatedAt"] == "2026-08-12T07:00:00+00:00"
     assert loaded["season"] == "2026-27"
     assert (pipedata / "run_log.txt").exists()
+
+
+class CareerFailingClient(FakeClient):
+    def get_player_seasons(self, pid):
+        raise RuntimeError("sofascore down")
+
+
+def test_run_pipeline_skips_publish_when_coverage_degraded(tmp_path, monkeypatch):
+    listone = tmp_path / "quot.xlsx"
+    _make_listone(listone)
+    out = tmp_path / "dataset.json"
+    pipedata = tmp_path / "pipedata"
+
+    def _fail_if_called(*a, **kw):
+        raise AssertionError("publish_dataset non doveva essere chiamato")
+
+    monkeypatch.setattr(fantapipe.publish, "publish_dataset", _fail_if_called)
+
+    ds = run_pipeline(listone, client=CareerFailingClient(), cache_dir=tmp_path / "cache",
+                      out_path=out, now_iso="2026-08-12T07:00:00+00:00",
+                      data_dir=pipedata, publish=True)
+    assert len(ds["players"]) == 4
+    log = (pipedata / "run_log.txt").read_text(encoding="utf-8")
+    assert "publish SALTATO" in log

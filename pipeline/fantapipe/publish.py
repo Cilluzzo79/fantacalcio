@@ -23,6 +23,6 @@ def publish_dataset(repo_root: Path, dataset_rel: str = "data/dataset.json",
     if diff.returncode == 0:
         return False  # nessuna modifica
     stamp = datetime.date.today().isoformat()
-    _git(repo_root, "commit", "-m", f"data: dataset update {stamp}")
+    _git(repo_root, "commit", "-m", f"data: dataset update {stamp}", "--", dataset_rel)
     _git(repo_root, "push", remote, branch)
     return True
