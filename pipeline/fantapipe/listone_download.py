@@ -5,9 +5,11 @@ import requests
 from dotenv import load_dotenv
 
 # Valori reali annotati nello Step 1 (aggiorna se il sito cambia)
-# BEST-GUESS values pending user verification via browser DevTools (Step 1)
+# EXPORT_URL verificato live 2026-08-13: la pagina quotazioni referenzia
+# /api/v1/Excel/prices/21/1 (stagione 2026-27 = id 21); risponde 401 senza login.
+# LOGIN_URL resta best-guess: verificato solo al primo tentativo con credenziali.
 LOGIN_URL = "https://www.fantacalcio.it/api/v1/User/login"
-EXPORT_URL = "https://www.fantacalcio.it/api/v1/Excel/prices/22/1"
+EXPORT_URL = "https://www.fantacalcio.it/api/v1/Excel/prices/21/1"
 LOGIN_FIELDS = ("username", "password")
 XLSX_MAGIC = b"PK\x03\x04"
 
