@@ -37,10 +37,13 @@ def test_run_pipeline_end_to_end(tmp_path):
     listone = tmp_path / "quot.xlsx"
     _make_listone(listone)
     out = tmp_path / "dataset.json"
+    pipedata = tmp_path / "pipedata"
     ds = run_pipeline(listone, client=FakeClient(), cache_dir=tmp_path / "cache",
-                      out_path=out, now_iso="2026-08-12T07:00:00+00:00")
+                      out_path=out, now_iso="2026-08-12T07:00:00+00:00", data_dir=pipedata)
     assert out.exists()
     loaded = json.loads(out.read_text(encoding="utf-8"))
     assert len(loaded["players"]) == 4
     assert all(p["sofaId"] is not None for p in loaded["players"])
     assert loaded["generatedAt"] == "2026-08-12T07:00:00+00:00"
+    assert loaded["season"] == "2026-27"
+    assert (pipedata / "run_log.txt").exists()

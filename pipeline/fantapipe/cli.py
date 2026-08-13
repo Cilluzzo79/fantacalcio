@@ -1,6 +1,5 @@
 import argparse
 import datetime
-import sys
 from pathlib import Path
 from fantapipe import config, sofa_client
 from fantapipe.career import fetch_career
@@ -16,10 +15,11 @@ def _season_label(now: datetime.date) -> str:
 
 
 def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
-                 out_path=None, now_iso=None, max_age_days=7):
+                 out_path=None, now_iso=None, max_age_days=7, data_dir=None):
     out_path = out_path or config.DATASET_OUT
-    now = datetime.datetime.now(datetime.UTC)
-    now_iso = now_iso or now.isoformat(timespec="seconds")
+    data_dir = data_dir or config.PIPE_DATA
+    now = datetime.datetime.fromisoformat(now_iso) if now_iso else datetime.datetime.now(datetime.UTC)
+    now_iso = now.isoformat(timespec="seconds")
     log = []
 
     df = load_listone(listone_path)
@@ -27,9 +27,9 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
 
     index, warns = build_sofa_index(sorted(df.squadra.unique()), client=client)
     log.extend(warns)
-    overrides = load_overrides(config.PIPE_DATA / "matching_overrides.csv")
+    overrides = load_overrides(data_dir / "matching_overrides.csv")
     matched = match_players(df, index, overrides)
-    write_report(matched, config.PIPE_DATA / "matching_report.csv")
+    write_report(matched, data_dir / "matching_report.csv")
     n_ok = int(matched.sofa_id.notna().sum())
     log.append(f"matching: {n_ok}/{len(matched)} matchati "
                f"({(matched.match_status == 'dubbio').sum()} dubbi)")
@@ -52,8 +52,8 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
     write_dataset(ds, out_path)
     log.append(f"dataset scritto: {out_path} ({len(ds['players'])} giocatori)")
 
-    config.PIPE_DATA.mkdir(parents=True, exist_ok=True)
-    (config.PIPE_DATA / "run_log.txt").write_text("\n".join(log), encoding="utf-8")
+    data_dir.mkdir(parents=True, exist_ok=True)
+    (data_dir / "run_log.txt").write_text("\n".join(log), encoding="utf-8")
     print("\n".join(log))
     return ds
 
