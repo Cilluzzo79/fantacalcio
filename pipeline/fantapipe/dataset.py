@@ -25,7 +25,8 @@ def build_dataset(matched_df: pd.DataFrame, careers: dict, season_label: str,
             proj = project_from_qta(r.qta, r.ruolo)
             seasons = []
         traits = compute_traits(seasons, r.ruolo)
-        aff = affidabilita(seasons, matched=sofa_id is not None)
+        aff = affidabilita(seasons, matched=sofa_id is not None,
+                          dubbio=(r.match_status == "dubbio"))
         note = trait_notes(traits)
         if proj.starts_share >= 0.8:
             note.insert(0, f"Titolarità altissima ({proj.starts_share:.0%})")

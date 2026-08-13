@@ -61,3 +61,19 @@ def test_fallback_da_quotazione():
 def test_carriera_vuota_solleva():
     with pytest.raises(ValueError):
         project([], "A")
+
+
+def test_portiere_scarta_stagione_senza_gol_subiti():
+    # Una stagione con presenze ma gol_subiti mancante (buco nei dati) non
+    # deve essere usata come se avesse subito 0 gol: va scartata, restando
+    # solo la stagione completa.
+    completa = mk(rating=6.95, gs=34, cs=10, rp=3)
+    incompleta = mk(rating=9.0, gs=None, cs=None, rp=None)  # rating estremo
+    p_solo_completa = project([completa], "P")
+    p_con_incompleta = project([completa, incompleta], "P")
+    assert p_con_incompleta.fm_proj == pytest.approx(p_solo_completa.fm_proj, abs=0.01)
+
+
+def test_portiere_tutte_stagioni_senza_gol_subiti_solleva():
+    with pytest.raises(ValueError):
+        project([mk(gs=None, cs=None, rp=None)], "P")

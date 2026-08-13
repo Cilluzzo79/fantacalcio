@@ -220,6 +220,35 @@ def test_scarce_league_adds_one_fallback(tmp_path):
     assert seasons[1].torneo == "Coppa Italia" and seasons[1].season == "24/25"
 
 
+def test_corrupt_cache_self_heals(tmp_path):
+    cache_file = tmp_path / "player_1.json"
+    cache_file.write_bytes(b"\x00\x01not json garbage{{{")
+    client = FakeClient()
+    seasons = career.fetch_career(1, client=client, cache_dir=tmp_path)
+    assert len(client.stats_calls) > 0  # rifetch avvenuto, cache non fidata
+    assert len(seasons) == 3
+    # la cache riscritta ora e' valida e riutilizzabile
+    reloaded = json.loads(cache_file.read_text(encoding="utf-8"))
+    assert len(reloaded) == 3
+
+
+def test_youth_competitions_excluded_when_enough_league_seasons(tmp_path):
+    # Round 4 fix: "Campionato Primavera 1" (giovanili) non deve mai essere
+    # selezionata come stagione primaria quando ci sono gia' abbastanza
+    # stagioni di campionato senior — stesso principio delle coppe/nazionali.
+    raw_seasons = [
+        {"uniqueTournament": {"id": 23, "name": "Serie A"},
+         "seasons": [{"id": 700, "year": "25/26"}, {"id": 600, "year": "24/25"}]},
+        {"uniqueTournament": {"id": 200, "name": "Campionato Primavera 1"},
+         "seasons": [{"id": 701, "year": "25/26"}, {"id": 601, "year": "24/25"}]},
+    ]
+    class C(FakeClient):
+        def get_player_seasons(self, pid):
+            return raw_seasons
+    seasons = career.fetch_career(11, client=C(), cache_dir=tmp_path)
+    assert [s.torneo for s in seasons] == ["Serie A", "Serie A"]
+
+
 def test_pure_fallback_no_league_at_all(tmp_path):
     # Nessuna voce di campionato in assoluto: fallback su fino a 2 voci
     # non-campionato, anno piu' recente prima, al massimo una per anno.

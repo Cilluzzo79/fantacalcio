@@ -38,6 +38,10 @@ def test_affidabilita_matchato_pieno():
     assert affidabilita([mk(), mk(), mk()], matched=True) == 100
 
 
+def test_affidabilita_dubbio_penalizzato():
+    assert affidabilita([mk(), mk(), mk()], matched=True, dubbio=True) == 85
+
+
 def test_affidabilita_non_matchato():
     assert affidabilita([], matched=False) <= 40
 

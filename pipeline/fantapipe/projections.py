@@ -22,7 +22,15 @@ def _weights(n: int) -> list[float]:
 
 
 def project(seasons: list[SeasonStats], ruolo: str) -> Projection:
-    usable = [s for s in seasons if s.pg >= MIN_PG][:3]
+    usable = [s for s in seasons if s.pg >= MIN_PG]
+    if ruolo == "P":
+        # Un portiere con presenze ma senza gol_subiti e' un buco nei dati
+        # (statistica non tracciata per quella stagione/torneo): usarla
+        # come se avesse subito 0 gol falserebbe fm_bonus verso l'alto.
+        # Meglio scartarla e cadere sul fallback per quotazione se non
+        # resta nulla di utilizzabile.
+        usable = [s for s in usable if not (s.pg > 0 and s.gol_subiti is None)]
+    usable = usable[:3]
     if not usable:
         raise ValueError("carriera vuota o senza stagioni utilizzabili")
     w = _weights(len(usable))

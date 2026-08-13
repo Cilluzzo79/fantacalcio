@@ -83,6 +83,35 @@ def test_ambiguous_surname_collision():
         assert "Rossi" in out.read_text(encoding="utf-8")
 
 
+def test_duplicate_sofa_id_demotes_lower_score():
+    single_index = {"Inter": [{"sofaId": 1, "nome": "Nicolò Barella"}]}
+    df = matching.match_players(
+        _listone([[30, "Barella", "C", "Inter", 28, 120],
+                  [31, "Barela", "C", "Inter", 5, 10]]),
+        single_index, {})
+    exact = df[df.id == 30].iloc[0]
+    dup = df[df.id == 31].iloc[0]
+    assert exact.sofa_id == 1 and exact.match_status == "exact"
+    assert pd.isna(dup.sofa_id) and dup.match_status == "duplicato"
+
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "report.csv"
+        matching.write_report(df, out)
+        assert "Barela" in out.read_text(encoding="utf-8")
+
+
+def test_duplicate_sofa_id_overrides_never_demoted():
+    single_index = {"Inter": [{"sofaId": 1, "nome": "Nicolò Barella"}]}
+    df = matching.match_players(
+        _listone([[32, "Barella", "C", "Inter", 28, 120],
+                  [33, "Someone Else", "C", "Inter", 5, 10]]),
+        single_index, {32: 3, 33: 3})
+    assert (df.sofa_id == 3).all()
+    assert (df.match_status == "override").all()
+
+
 def test_unambiguous_subset_stays_exact():
     """Regression: unambiguous subset matches (e.g. 'Barella' vs 'Nicolò Barella' alone)
     should still get status 'exact'."""

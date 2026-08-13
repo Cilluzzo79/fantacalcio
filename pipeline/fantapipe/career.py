@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -43,7 +44,9 @@ def _year_key(year: str) -> int:
 # campionati) a competizioni non-campionato.
 EXCLUDE_KEYWORDS = ("cup", "copp", "copa", "super cup", "qual", "world cup",
                     "euro", "nations league", "friendl", "champions league",
-                    "europa league", "conference league", "olymp", "africa cup")
+                    "europa league", "conference league", "olymp", "africa cup",
+                    "primavera", "youth", "u19", "u20", "u21", "u23", "reserve",
+                    "junior")
 
 
 # Fix round 3 post-review (2026-08-13): UEFA Champions League / Europa
@@ -98,8 +101,14 @@ def fetch_career(sofa_id: int, client=sofa_client,
     if cache_file.exists():
         age_days = (time.time() - cache_file.stat().st_mtime) / 86400
         if age_days <= max_age_days:
-            data = json.loads(cache_file.read_text(encoding="utf-8"))
-            return [SeasonStats(**d) for d in data]
+            try:
+                data = json.loads(cache_file.read_text(encoding="utf-8"))
+                return [SeasonStats(**d) for d in data]
+            except (json.JSONDecodeError, TypeError, ValueError):
+                # Cache corrotta (scrittura interrotta, byte spazzatura,
+                # shape inattesa): non deve bloccare la pipeline, si
+                # rimuove e si rifetcha da zero.
+                cache_file.unlink(missing_ok=True)
 
     entries = []  # (year_key, torneo, season_id, year, ut_id)
     for t in client.get_player_seasons(sofa_id):
@@ -153,8 +162,11 @@ def fetch_career(sofa_id: int, client=sofa_client,
         raw = client.get_player_season_stats(sofa_id, ut_id, season_id)
         seasons.append(_normalize(raw, torneo, year))
 
-    cache_file.write_text(json.dumps([asdict(s) for s in seasons]),
-                          encoding="utf-8")
+    # Scrittura atomica: write+replace evita di lasciare un file troncato
+    # (e quindi corrotto) se il processo viene interrotto a meta' scrittura.
+    tmp = cache_file.with_suffix(".tmp")
+    tmp.write_text(json.dumps([asdict(s) for s in seasons]), encoding="utf-8")
+    os.replace(tmp, cache_file)
     return seasons
 
 

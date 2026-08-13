@@ -18,10 +18,12 @@ def assign_fasce(df: pd.DataFrame) -> pd.Series:
     return out
 
 
-def affidabilita(seasons: list[SeasonStats], matched: bool) -> int:
+def affidabilita(seasons: list[SeasonStats], matched: bool, dubbio: bool = False) -> int:
     score = 100.0
     if not matched:
         score -= 60
+    if dubbio:
+        score -= 15
     if seasons:
         if not any(s.torneo == "Serie A" for s in seasons):
             score -= 20

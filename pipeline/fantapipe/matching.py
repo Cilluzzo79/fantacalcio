@@ -69,6 +69,23 @@ def match_players(listone: pd.DataFrame, index: dict, overrides: dict) -> pd.Dat
     df["sofa_id"] = pd.array(ids, dtype="Int64")
     df["match_score"] = scores
     df["match_status"] = statuses
+
+    # Fix post-review: due righe listone distinte non devono mai finire
+    # matchate sullo stesso sofa_id (dati incoerenti a valle: carriera
+    # duplicata su due giocatori). Le override sono forzature esplicite
+    # dell'utente e restano escluse dal controllo. Tra le righe in
+    # collisione si tiene quella col match_score piu' alto; le altre
+    # vengono retrocesse a "duplicato" (sofa_id svuotato) cosi' finiscono
+    # nel matching_report.csv per revisione manuale.
+    not_override = df.match_status != "override"
+    dup_counts = df.loc[not_override & df.sofa_id.notna(), "sofa_id"].value_counts()
+    for sofa_id in dup_counts[dup_counts > 1].index:
+        rows = df[not_override & (df.sofa_id == sofa_id)]
+        keep_idx = rows.match_score.idxmax()
+        drop_idx = [i for i in rows.index if i != keep_idx]
+        df.loc[drop_idx, "sofa_id"] = pd.NA
+        df.loc[drop_idx, "match_status"] = "duplicato"
+
     return df
 
 
@@ -80,7 +97,7 @@ def load_overrides(path: Path) -> dict:
 
 
 def write_report(df: pd.DataFrame, path: Path) -> None:
-    rep = df[df.match_status.isin(["dubbio", "nessuno"])]
+    rep = df[df.match_status.isin(["dubbio", "nessuno", "duplicato"])]
     path.parent.mkdir(parents=True, exist_ok=True)
     rep[["id", "nome", "squadra", "ruolo", "sofa_id", "match_score", "match_status"]] \
         .to_csv(path, index=False, encoding="utf-8")
