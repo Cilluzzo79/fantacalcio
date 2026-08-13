@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import sys
 from pathlib import Path
 from fantapipe import config, sofa_client
 from fantapipe.career import fetch_career
@@ -66,11 +67,21 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="fantapipe")
-    ap.add_argument("--listone", type=Path, required=True)
+    ap.add_argument("--listone", type=Path, required=False, default=None)
     ap.add_argument("--max-age-days", type=int, default=7)
     ap.add_argument("--skip-publish", action="store_true")
     args = ap.parse_args(argv)
-    run_pipeline(args.listone, max_age_days=args.max_age_days,
+
+    listone = args.listone
+    if listone is None:
+        from fantapipe.listone_download import download_listone, latest_listone
+        listone_dir = config.PIPE_DATA / "listone"
+        listone = download_listone(listone_dir) or latest_listone(listone_dir)
+        if listone is None:
+            sys.exit("Nessun listone: download fallito e nessun file in "
+                     f"{listone_dir}. Scarica l'export a mano e riprova con --listone.")
+
+    run_pipeline(listone, max_age_days=args.max_age_days,
                 publish=not args.skip_publish)
 
 
