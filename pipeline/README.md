@@ -40,12 +40,26 @@ https://raw.githubusercontent.com/Cilluzzo79/fantacalcio/master/data/dataset.jso
 
 ## Matching Doubts & Overrides
 
-When player names or IDs between Listone and SofaScore squads are ambiguous, the pipeline generates a `matching_report.csv` in `pipeline/data/matching_report.csv`. This report flags uncertain matches.
+When player names or IDs between Listone and SofaScore squads are ambiguous, the pipeline generates a `matching_report.csv` in `pipeline/data/matching_report.csv`. This report flags uncertain matches with their proposed sofa_id and a match_status of "dubbio" (doubt) or "nessuno" (no match found).
 
-To manually correct or approve matches:
-1. Review `pipeline/data/matching_report.csv` for flagged entries
-2. Create or edit `pipeline/data/matching_overrides.csv` with three columns: `listone_id`, `sofa_id`, `action` (accept/reject/fix)
-3. The next pipeline run will apply these overrides and incorporate them into the final dataset
+To manually correct uncertain matches, create or edit `pipeline/data/matching_overrides.csv` with exactly two columns: `listone_id,sofa_id`. Each row is a FORCED mapping that overrides fuzzy matching results entirely.
+
+**Workflow:**
+1. Review `pipeline/data/matching_report.csv` for rows with `match_status` = "dubbio" or "nessuno"
+2. For each incorrect match, find the correct SofaScore player ID using:
+   ```powershell
+   sofascore-pp-cli sofascore-search --q "<player_name>" --agent
+   ```
+3. Add a row to `pipeline/data/matching_overrides.csv` with the corrected sofa_id (the override wins over any fuzzy result)
+4. Re-run the pipeline — overridden matches will have `match_status` = "override"
+
+**Example override file:**
+```
+listone_id,sofa_id
+42,1234567
+89,2345678
+125,3456789
+```
 
 ## Credentials & Environment
 
