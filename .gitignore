@@ -2,6 +2,8 @@ pipeline/.venv/
 pipeline/cache/
 pipeline/data/
 .env
+.claude/settings.local.json
+.superpowers/
 __pycache__/
 *.pyc
 .pytest_cache/

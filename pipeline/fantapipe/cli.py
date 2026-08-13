@@ -15,7 +15,8 @@ def _season_label(now: datetime.date) -> str:
 
 
 def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
-                 out_path=None, now_iso=None, max_age_days=7, data_dir=None):
+                 out_path=None, now_iso=None, max_age_days=7, data_dir=None,
+                 publish: bool = False):
     out_path = out_path or config.DATASET_OUT
     data_dir = data_dir or config.PIPE_DATA
     now = datetime.datetime.fromisoformat(now_iso) if now_iso else datetime.datetime.now(datetime.UTC)
@@ -52,6 +53,11 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
     write_dataset(ds, out_path)
     log.append(f"dataset scritto: {out_path} ({len(ds['players'])} giocatori)")
 
+    if publish:
+        from fantapipe.publish import publish_dataset
+        pushed = publish_dataset(config.ROOT)
+        log.append("publish: pushed" if pushed else "publish: nessuna modifica")
+
     data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "run_log.txt").write_text("\n".join(log), encoding="utf-8")
     print("\n".join(log))
@@ -62,8 +68,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="fantapipe")
     ap.add_argument("--listone", type=Path, required=True)
     ap.add_argument("--max-age-days", type=int, default=7)
+    ap.add_argument("--skip-publish", action="store_true")
     args = ap.parse_args(argv)
-    run_pipeline(args.listone, max_age_days=args.max_age_days)
+    run_pipeline(args.listone, max_age_days=args.max_age_days,
+                publish=not args.skip_publish)
 
 
 if __name__ == "__main__":
