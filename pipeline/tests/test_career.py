@@ -2,11 +2,15 @@ import json
 from fantapipe import career
 
 
+# Anni distinti per ogni torneo, cosi' il fixture resta significativo anche
+# con la selezione "un anno = una voce" (fix post-review 2026-08-13): Serie A
+# 25/26 e 24/25, Premier League 23/24 (nessuna collisione di anno fra i due
+# campionati).
 RAW_SEASONS = [
     {"uniqueTournament": {"id": 23, "name": "Serie A"},
      "seasons": [{"id": 700, "year": "25/26"}, {"id": 600, "year": "24/25"}]},
     {"uniqueTournament": {"id": 17, "name": "Premier League"},
-     "seasons": [{"id": 650, "year": "24/25"}]},
+     "seasons": [{"id": 650, "year": "23/24"}]},
 ]
 
 # Chiavi reali scoperte live sull'endpoint
@@ -55,6 +59,8 @@ def test_fetch_career_usa_cache(tmp_path):
 
 
 def test_max_4_stagioni(tmp_path):
+    # 6 anni distinti (Serie A ogni anno, nessuna sovrapposizione) -> le 4
+    # piu' recenti vengono tenute, le altre 2 scartate.
     many = [{"uniqueTournament": {"id": 23, "name": "Serie A"},
              "seasons": [{"id": 700 + i, "year": f"{20+i}/{21+i}"} for i in range(6)]}]
     class C(FakeClient):
@@ -62,9 +68,69 @@ def test_max_4_stagioni(tmp_path):
             return many
     seasons = career.fetch_career(2, client=C(), cache_dir=tmp_path)
     assert len(seasons) == 4
+    assert [s.season for s in seasons] == ["25/26", "24/25", "23/24", "22/23"]
 
 
 def test_career_to_jsonable_camelcase(tmp_path):
     seasons = career.fetch_career(1, client=FakeClient(), cache_dir=tmp_path)
     j = career.career_to_jsonable(seasons)
     assert "rigCalc" in j[0] and "golSubiti" in j[0] and "cleanSheet" in j[0]
+
+
+def test_multi_competition_same_year_prefers_league(tmp_path):
+    # Ogni anno ha 3 voci: campionato + coppa nazionale + qualificazioni
+    # mondiali. Senza priorita' le 4 "piu' recenti" finivano tutte
+    # accalcate in un solo anno (il bug segnalato in review su Barella).
+    # Con la selezione per-anno deve restare solo Serie A, una voce per
+    # anno, e le chiamate stats devono avvenire SOLO per quelle 2 voci.
+    raw_seasons = [
+        {"uniqueTournament": {"id": 23, "name": "Serie A"},
+         "seasons": [{"id": 700, "year": "25/26"}, {"id": 600, "year": "24/25"}]},
+        {"uniqueTournament": {"id": 99, "name": "Coppa Italia"},
+         "seasons": [{"id": 701, "year": "25/26"}, {"id": 601, "year": "24/25"}]},
+        {"uniqueTournament": {"id": 98, "name": "World Cup Qual. UEFA"},
+         "seasons": [{"id": 702, "year": "25/26"}, {"id": 602, "year": "24/25"}]},
+    ]
+    class C(FakeClient):
+        def get_player_seasons(self, pid):
+            return raw_seasons
+    client = C()
+    seasons = career.fetch_career(3, client=client, cache_dir=tmp_path)
+    assert len(seasons) == 2
+    assert [s.torneo for s in seasons] == ["Serie A", "Serie A"]
+    assert [s.season for s in seasons] == ["25/26", "24/25"]
+    assert sorted(client.stats_calls) == sorted([(23, 700), (23, 600)])
+
+
+def test_unknown_league_beats_cup(tmp_path):
+    # "Brasileirao Serie A" non e' in config.LEAGUE_COEFF (priorita' 1,
+    # campionato ignoto) ma batte comunque "Copa do Brasil" (priorita' 2,
+    # coppa) nello stesso anno.
+    raw_seasons = [
+        {"uniqueTournament": {"id": 50, "name": "Brasileirao Serie A"},
+         "seasons": [{"id": 800, "year": "25"}]},
+        {"uniqueTournament": {"id": 51, "name": "Copa do Brasil"},
+         "seasons": [{"id": 801, "year": "25"}]},
+    ]
+    class C(FakeClient):
+        def get_player_seasons(self, pid):
+            return raw_seasons
+    seasons = career.fetch_career(4, client=C(), cache_dir=tmp_path)
+    assert len(seasons) == 1
+    assert seasons[0].torneo == "Brasileirao Serie A"
+
+
+def test_fallback_to_cup_when_no_league_that_year(tmp_path):
+    # Un anno la cui unica voce e' una competizione non-campionato non deve
+    # essere scartato: meglio una voce di fallback che nessun dato per
+    # quell'anno.
+    raw_seasons = [
+        {"uniqueTournament": {"id": 98, "name": "World Cup Qual. UEFA"},
+         "seasons": [{"id": 900, "year": "26"}]},
+    ]
+    class C(FakeClient):
+        def get_player_seasons(self, pid):
+            return raw_seasons
+    seasons = career.fetch_career(5, client=C(), cache_dir=tmp_path)
+    assert len(seasons) == 1
+    assert seasons[0].torneo == "World Cup Qual. UEFA"

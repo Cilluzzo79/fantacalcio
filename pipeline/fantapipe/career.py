@@ -33,6 +33,27 @@ def _year_key(year: str) -> int:
     return int(head[-2:])
 
 
+# Fix post-review (2026-08-13): un anno spesso contiene piu' voci
+# (campionato + coppe + nazionale). Senza priorita', 4 voci "piu' recenti"
+# potevano finire tutte nello stesso anno (es. Serie A + Coppa Italia +
+# Supercoppa + WC Qualifiers 25/26 per Barella), falsando sia la formula di
+# durability del Task 6 (media minuti su una sola stagione spacciata per 4)
+# sia la ponderazione per recency del Task 7 (fette dello stesso anno invece
+# di anni distinti), oltre ad applicare league_coeff (pensato per pesare i
+# campionati) a competizioni non-campionato.
+EXCLUDE_KEYWORDS = ("cup", "copp", "copa", "super cup", "qual", "world cup",
+                    "euro", "nations league", "friendl", "champions league",
+                    "europa league", "conference league", "olymp", "africa cup")
+
+
+def _priority(torneo: str) -> int:
+    if torneo in config.LEAGUE_COEFF:
+        return 0  # campionato noto
+    if any(k in torneo.lower() for k in EXCLUDE_KEYWORDS):
+        return 2  # coppa/nazionale/competizione non-campionato
+    return 1      # campionato sconosciuto (es. lega estera minore) — batte le coppe
+
+
 def _int(v):  return int(v) if v is not None else 0
 def _opt(v):  return int(v) if v is not None else None
 
@@ -76,10 +97,22 @@ def fetch_career(sofa_id: int, client=sofa_client,
             entries.append((_year_key(season["year"]), torneo,
                             season["id"], season["year"],
                             t.get("uniqueTournament", {}).get("id")))
-    entries.sort(key=lambda e: e[0], reverse=True)
+
+    # Un anno = una voce sola: fra le competizioni dello stesso anno vince
+    # quella con priorita' piu' bassa (campionato noto > campionato ignoto >
+    # coppa/nazionale). min() e' stabile: a parita' di priorita' vince la
+    # prima incontrata nell'ordine restituito da get_player_seasons.
+    by_year = {}
+    for entry in entries:
+        by_year.setdefault(entry[0], []).append(entry)
+
+    selected = [
+        min(by_year[year_key], key=lambda e: _priority(e[1]))
+        for year_key in sorted(by_year, reverse=True)[:MAX_SEASONS]
+    ]
 
     seasons = []
-    for _, torneo, season_id, year, ut_id in entries[:MAX_SEASONS]:
+    for _, torneo, season_id, year, ut_id in selected:
         raw = client.get_player_season_stats(sofa_id, ut_id, season_id)
         seasons.append(_normalize(raw, torneo, year))
 
