@@ -34,7 +34,8 @@ export function teamSummary(state: AuctionState, league: League,
 
 export function registerPurchase(state: AuctionState, league: League,
   players: Map<number, Player>,
-  p: { playerId: number; teamId: string; prezzo: number }): AuctionState {
+  p: { playerId: number; teamId: string; prezzo: number },
+  opts?: { force?: boolean }): AuctionState {
   const player = players.get(p.playerId);
   if (!player) throw new AuctionError("giocatore sconosciuto");
   const giaVenduto = state.purchases.some(x => x.playerId === p.playerId)
@@ -42,10 +43,12 @@ export function registerPurchase(state: AuctionState, league: League,
   if (giaVenduto) throw new AuctionError("giocatore già acquistato");
   if (p.prezzo < 1) throw new AuctionError("prezzo minimo 1");
   const sum = teamSummary(state, league, players, p.teamId);
-  if (sum.slotLiberi[player.ruolo] <= 0)
-    throw new AuctionError(`slot ${player.ruolo} pieni`);
-  if (p.prezzo > sum.maxOfferta)
-    throw new AuctionError(`budget insufficiente: restano ${sum.maxOfferta} crediti utilizzabili`);
+  if (!opts?.force) {
+    if (sum.slotLiberi[player.ruolo] <= 0)
+      throw new AuctionError(`slot ${player.ruolo} pieni`);
+    if (p.prezzo > sum.maxOfferta)
+      throw new AuctionError(`budget insufficiente: restano ${sum.maxOfferta} crediti utilizzabili`);
+  }
   const purchase: Purchase = { id: newId(), ...p, ts: new Date().toISOString() };
   return { ...state, purchases: [...state.purchases, purchase] };
 }
@@ -60,7 +63,8 @@ export function removePurchase(state: AuctionState, purchaseId: string): Auction
 
 export function editPurchase(state: AuctionState, league: League,
   players: Map<number, Player>, purchaseId: string,
-  patch: { teamId?: string; prezzo?: number }): AuctionState {
+  patch: { teamId?: string; prezzo?: number },
+  opts?: { force?: boolean }): AuctionState {
   const orig = state.purchases.find(p => p.id === purchaseId);
   if (!orig) throw new AuctionError("acquisto inesistente");
   const without = removePurchase(state, purchaseId);
@@ -68,9 +72,12 @@ export function editPurchase(state: AuctionState, league: League,
     playerId: orig.playerId,
     teamId: patch.teamId ?? orig.teamId,
     prezzo: patch.prezzo ?? orig.prezzo,
-  });
-  // mantieni l'ordine originale: reinserisci nella stessa posizione
-  const nuovo = reregistered.purchases[reregistered.purchases.length - 1];
+  }, opts);
+  // mantieni id/ts originali e l'ordine originale: reinserisci nella stessa posizione
+  const nuovo: Purchase = {
+    ...reregistered.purchases[reregistered.purchases.length - 1],
+    id: orig.id, ts: orig.ts,
+  };
   const idx = state.purchases.findIndex(p => p.id === purchaseId);
   const purchases = [...without.purchases];
   purchases.splice(idx, 0, nuovo);

@@ -31,6 +31,10 @@ export const useLeagues = create<LeaguesState>()(
 
       createLeague(input) {
         if (get().leagues.length >= MAX_LEAGUES) throw new Error("massimo 5 leghe");
+        if (input.myTeamIndex !== undefined
+          && (input.myTeamIndex < 0 || input.myTeamIndex >= input.teamNames.length)) {
+          throw new Error("myTeamIndex non valido");
+        }
         const teams: TeamConfig[] = input.teamNames.map(nome => ({
           id: newId(), nome, crediti: input.crediti, rosterIniziale: [],
         }));
@@ -44,6 +48,13 @@ export const useLeagues = create<LeaguesState>()(
       },
 
       updateLeague(id, patch) {
+        if (patch.myTeamIndex !== undefined) {
+          const league = get().leagues.find(l => l.id === id);
+          if (league
+            && (patch.myTeamIndex < 0 || patch.myTeamIndex >= league.teams.length)) {
+            throw new Error("myTeamIndex non valido");
+          }
+        }
         set(s => ({ leagues: s.leagues.map(l => (l.id === id ? { ...l, ...patch } : l)) }));
       },
 

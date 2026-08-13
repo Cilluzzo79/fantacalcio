@@ -74,6 +74,44 @@ test("edit re-valida (prezzo eccessivo rifiutato)", () => {
   expect(st.purchases[0].prezzo).toBe(50);
 });
 
+test("edit mantiene id e ts originali", () => {
+  let st = emptyAuction("L1");
+  st = registerPurchase(st, league(), byId, { playerId: att.id, teamId: "T1", prezzo: 10 });
+  const orig = st.purchases[0];
+  st = editPurchase(st, league(), byId, orig.id, { prezzo: 50 });
+  expect(st.purchases[0].id).toBe(orig.id);
+  expect(st.purchases[0].ts).toBe(orig.ts);
+  expect(st.purchases[0].prezzo).toBe(50);
+});
+
+test("force: consente over-budget e over-slot", () => {
+  let st = emptyAuction("L1");
+  st = registerPurchase(st, league(), byId, { playerId: att.id, teamId: "T1", prezzo: 10 });
+  // slot A già pieno (league() ha slots.A = 1) e prezzo ben oltre il budget residuo
+  st = registerPurchase(st, league(), byId,
+    { playerId: attLow.id, teamId: "T1", prezzo: 200 }, { force: true });
+  expect(st.purchases).toHaveLength(2);
+  expect(st.purchases[1].prezzo).toBe(200);
+});
+
+test("force: giocatore già acquistato resta bloccato", () => {
+  let st = emptyAuction("L1");
+  st = registerPurchase(st, league(), byId, { playerId: att.id, teamId: "T1", prezzo: 10 });
+  expect(() => registerPurchase(st, league(), byId,
+    { playerId: att.id, teamId: "T2", prezzo: 5 }, { force: true }))
+    .toThrow(/già acquistato/);
+});
+
+test("force: squadra sconosciuta e prezzo minimo restano validati", () => {
+  const st = emptyAuction("L1");
+  expect(() => registerPurchase(st, league(), byId,
+    { playerId: att.id, teamId: "T9", prezzo: 5 }, { force: true }))
+    .toThrow(/squadra sconosciuta/);
+  expect(() => registerPurchase(st, league(), byId,
+    { playerId: att.id, teamId: "T1", prezzo: 0 }, { force: true }))
+    .toThrow(/prezzo minimo/);
+});
+
 test("modalità riparazione: roster iniziale occupa slot", () => {
   const l = league();
   l.teams[0].rosterIniziale = [{ playerId: por.id, prezzo: 20 }];

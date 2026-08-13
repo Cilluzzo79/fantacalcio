@@ -10,12 +10,26 @@ interface AuctionsStore {
   byLeague: Record<string, AuctionState>;
   getAuction(leagueId: string): AuctionState;
   purchase(leagueId: string, league: League, players: Map<number, Player>,
-    p: { playerId: number; teamId: string; prezzo: number }): void;
+    p: { playerId: number; teamId: string; prezzo: number }, opts?: { force?: boolean }): void;
   undo(leagueId: string): void;
   remove(leagueId: string, purchaseId: string): void;
   edit(leagueId: string, league: League, players: Map<number, Player>,
-    purchaseId: string, patch: { teamId?: string; prezzo?: number }): void;
+    purchaseId: string, patch: { teamId?: string; prezzo?: number },
+    opts?: { force?: boolean }): void;
   resetAuction(leagueId: string): void;
+}
+
+// cache module-level: garantisce che getAuction ritorni SEMPRE lo stesso
+// riferimento per una lega assente, indipendentemente da quante volte viene
+// chiamata (utile per selettori/memo a valle che confrontano per identità).
+const emptyAuctionCache = new Map<string, AuctionState>();
+function getCachedEmptyAuction(leagueId: string): AuctionState {
+  let a = emptyAuctionCache.get(leagueId);
+  if (!a) {
+    a = emptyAuction(leagueId);
+    emptyAuctionCache.set(leagueId, a);
+  }
+  return a;
 }
 
 export const useAuctions = create<AuctionsStore>()(
@@ -24,10 +38,10 @@ export const useAuctions = create<AuctionsStore>()(
       byLeague: {},
 
       getAuction(leagueId) {
-        return get().byLeague[leagueId] ?? emptyAuction(leagueId);
+        return get().byLeague[leagueId] ?? getCachedEmptyAuction(leagueId);
       },
-      purchase(leagueId, league, players, p) {
-        const next = registerPurchase(get().getAuction(leagueId), league, players, p);
+      purchase(leagueId, league, players, p, opts) {
+        const next = registerPurchase(get().getAuction(leagueId), league, players, p, opts);
         set(s => ({ byLeague: { ...s.byLeague, [leagueId]: next } }));
       },
       undo(leagueId) {
@@ -38,8 +52,9 @@ export const useAuctions = create<AuctionsStore>()(
         const next = removePurchase(get().getAuction(leagueId), purchaseId);
         set(s => ({ byLeague: { ...s.byLeague, [leagueId]: next } }));
       },
-      edit(leagueId, league, players, purchaseId, patch) {
-        const next = editPurchase(get().getAuction(leagueId), league, players, purchaseId, patch);
+      edit(leagueId, league, players, purchaseId, patch, opts) {
+        const next = editPurchase(get().getAuction(leagueId), league, players,
+          purchaseId, patch, opts);
         set(s => ({ byLeague: { ...s.byLeague, [leagueId]: next } }));
       },
       resetAuction(leagueId) {

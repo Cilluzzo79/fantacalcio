@@ -38,6 +38,19 @@ test("gli errori di validazione si propagano senza corrompere lo stato", () => {
   expect(st.getAuction("L1").purchases).toHaveLength(0);
 });
 
+test("getAuction: riferimento stabile per leghe assenti", () => {
+  const st = useAuctions.getState();
+  const a1 = st.getAuction("LX");
+  const a2 = st.getAuction("LX");
+  expect(a1).toBe(a2);
+});
+
+test("purchase con force: consente over-budget", () => {
+  const st = useAuctions.getState();
+  st.purchase("L1", league(), byId, { playerId: att.id, teamId: "T1", prezzo: 200 }, { force: true });
+  expect(st.getAuction("L1").purchases).toHaveLength(1);
+});
+
 test("undo, remove e reset", () => {
   const st = useAuctions.getState();
   st.purchase("L1", league(), byId, { playerId: att.id, teamId: "T1", prezzo: 30 });

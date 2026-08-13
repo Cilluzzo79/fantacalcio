@@ -33,6 +33,21 @@ test("modalità riparazione: rosa iniziale e crediti residui", () => {
   expect(updated.teams[1].crediti).toBe(120);
 });
 
+test("createLeague: myTeamIndex fuori range -> errore", () => {
+  expect(() => useLeagues.getState().createLeague({ ...input("Bad"), myTeamIndex: 4 }))
+    .toThrow(/myTeamIndex non valido/);
+  expect(() => useLeagues.getState().createLeague({ ...input("Bad2"), myTeamIndex: -1 }))
+    .toThrow(/myTeamIndex non valido/);
+});
+
+test("updateLeague: myTeamIndex fuori range -> errore", () => {
+  const l = useLeagues.getState().createLeague(input("Lega A"));
+  expect(() => useLeagues.getState().updateLeague(l.id, { myTeamIndex: 99 }))
+    .toThrow(/myTeamIndex non valido/);
+  // il valore non deve essere cambiato
+  expect(useLeagues.getState().leagues[0].myTeamIndex).toBe(0);
+});
+
 test("update e delete", () => {
   const l = useLeagues.getState().createLeague(input("Lega A"));
   useLeagues.getState().updateLeague(l.id, { nome: "Rinominata" });
