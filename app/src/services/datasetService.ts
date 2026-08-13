@@ -29,12 +29,12 @@ function defaultDeps(): Deps {
 }
 
 export async function loadLocalDataset(deps: Deps = defaultDeps()): Promise<Dataset | null> {
-  const raw = await deps.readFile(LOCAL_PATH);
-  if (raw === null) return null;
   try {
+    const raw = await deps.readFile(LOCAL_PATH);
+    if (raw === null) return null;
     return parseDataset(JSON.parse(raw));
   } catch {
-    return null; // file corrotto: come se non ci fosse (verrà riscaricato)
+    return null; // file corrotto o lettura fallita: come se non ci fosse (verrà riscaricato)
   }
 }
 
