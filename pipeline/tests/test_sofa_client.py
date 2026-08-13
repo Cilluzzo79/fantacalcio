@@ -24,6 +24,19 @@ def test_run_cli_parses_json(monkeypatch):
     assert captured["cmd"][0].endswith("sofascore-pp-cli.exe")
 
 
+def test_run_cli_respects_call_spacing(monkeypatch):
+    # CALL_SPACING_S e' azzerato globalmente da tests/conftest.py; qui lo si
+    # rialza localmente per verificare che run_cli lo rispetti davvero e che
+    # sia effettivamente patchabile (requisito M2).
+    monkeypatch.setattr(sofa_client, "CALL_SPACING_S", 0.02)
+    slept = []
+    monkeypatch.setattr(sofa_client.time, "sleep", lambda s: slept.append(s))
+    monkeypatch.setattr(subprocess, "run",
+                        lambda cmd, **kw: FakeCompleted(json.dumps({"ok": 1})))
+    sofa_client.run_cli(["version"])
+    assert slept == [0.02]
+
+
 def test_run_cli_raises_on_error(monkeypatch):
     monkeypatch.setattr(subprocess, "run",
                         lambda cmd, **kw: FakeCompleted("", 1, "boom"))

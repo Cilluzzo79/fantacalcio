@@ -11,6 +11,11 @@ AMBIGUITY_MARGIN = 5.0   # max score difference before downgrading to dubbio
 
 
 def normalize_name(s: str) -> str:
+    # U+2019 (apostrofo tipografico, es. "N'Dicka" da alcune fonti) non ha
+    # decomposizione NFKD e verrebbe silenziosamente scartato dall'encode
+    # ascii "ignore" sotto (a differenza dell'apostrofo ASCII, che diventa
+    # spazio): normalizzarlo PRIMA cosi' segue lo stesso trattamento.
+    s = s.replace("’", "'")
     s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
     return " ".join(s.lower().replace(".", " ").replace("'", " ").split())
 

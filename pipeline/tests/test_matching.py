@@ -17,6 +17,12 @@ def test_normalize_name():
     assert matching.normalize_name("MARTINEZ L.") == "martinez l"
 
 
+def test_normalize_name_apostrofo_tipografico():
+    # U+2019 (apostrofo tipografico) va trattato come l'apostrofo ASCII,
+    # non scartato silenziosamente dall'encode ascii "ignore".
+    assert matching.normalize_name("N’Dicka") == matching.normalize_name("N'Dicka")
+
+
 def test_match_exact_cognome():
     df = matching.match_players(_listone([[10, "Barella", "C", "Inter", 28, 120]]),
                                 INDEX, {})

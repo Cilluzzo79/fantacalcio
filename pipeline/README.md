@@ -8,7 +8,7 @@ The pipeline orchestrates data ingestion and transformation in four stages: (1) 
 
 ## Running the Pipeline
 
-Manual run (auto-downloads Listone from Fantacalcio.it, falls back to latest file if credentials missing):
+Manual run (auto-downloads Listone from Fantacalcio.it — **best-effort**: `LOGIN_URL`/`EXPORT_URL` in `fantapipe/listone_download.py` are unverified best-guess values pending a one-time DevTools check, see checklist below — falls back to latest file if credentials missing or the download fails):
 ```powershell
 .venv\Scripts\python -m fantapipe.cli
 ```
@@ -23,7 +23,7 @@ Skip publishing to GitHub:
 .venv\Scripts\python -m fantapipe.cli --skip-publish
 ```
 
-Run tests (82 tests):
+Run tests (95 tests):
 ```powershell
 .venv\Scripts\python -m pytest tests -v
 ```
@@ -78,7 +78,7 @@ A Windows Task Scheduler task named **FantacalcioPipeline** runs the pipeline ev
 - **Task name:** FantacalcioPipeline
 - **Schedule:** Weekly, Monday, 09:00
 - **Script:** `D:\railway\fantacalcio\pipeline\run_weekly.ps1`
-- **Log output:** `pipeline\data\scheduler_log.txt` (one line per run: timestamp + OK or ERRORE)
+- **Log output:** `pipeline\data\scheduler_log.txt` (one line per run: timestamp + OK, or timestamp + "ERRORE: pipeline exit code 1" on failure — that line alone has no detail; the full stdout/stderr of the run is captured separately in `pipeline\data\last_run_output.txt`, overwritten every run)
 
 If the machine is powered off on Monday morning and misses the scheduled start, the task will not automatically run later. To enable missed-start recovery:
 1. Open Task Scheduler GUI
@@ -88,3 +88,13 @@ If the machine is powered off on Monday morning and misses the scheduled start, 
 5. Click OK
 
 **Expected behavior during setup:** If `.env` credentials or a Listone file are missing, the scheduled task will log an ERRORE line with "Nessun listone" message. This is normal during initial setup — once credentials and a Listone file are in place, the task will run successfully.
+
+## Checklist prima run reale
+
+Prima di affidarsi a una run reale (specialmente la prima, o dopo che il sito Fantacalcio.it cambia):
+
+1. **Verifica LOGIN_URL/EXPORT_URL** in `fantapipe/listone_download.py` via DevTools del browser (Network tab durante login + export manuale sul sito) — sono valori best-guess mai verificati live. In alternativa, scarica il listone a mano e salvalo in `pipeline/data/listone/`.
+2. **Prima run con `--skip-publish`** per controllare l'output senza pubblicare un dataset potenzialmente sbagliato.
+3. **Rivedi `matching_report.csv`** (righe `dubbio` e `duplicato`) e confronta le squadre del listone con `TEAM_ALIASES` in `fantapipe/config.py` — squadre non mappate finiscono con `match_status="nessuno"` per tutti i loro giocatori.
+4. **Verifica le statistiche di un PORTIERE reale** nel dataset generato: controlla che `gol subiti` (season `golSubiti`) sia presente e non `null` per le sue stagioni più recenti.
+5. **Run con publish** e verifica che il raw URL (`https://raw.githubusercontent.com/Cilluzzo79/fantacalcio/master/data/dataset.json`) risponda con il dataset aggiornato.

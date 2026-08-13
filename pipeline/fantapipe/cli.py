@@ -35,6 +35,10 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
     n_ok = int(matched.sofa_id.notna().sum())
     log.append(f"matching: {n_ok}/{len(matched)} matchati "
                f"({(matched.match_status == 'dubbio').sum()} dubbi)")
+    for squadra in sorted(matched.squadra.unique()):
+        grp = matched[matched.squadra == squadra]
+        matchati = int(grp.sofa_id.notna().sum())
+        log.append(f"matching {squadra}: {matchati}/{len(grp)}")
 
     careers = {}
     for sofa_id in matched.sofa_id.dropna().astype(int).unique():

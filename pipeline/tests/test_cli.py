@@ -55,6 +55,8 @@ def test_run_pipeline_end_to_end(tmp_path):
     assert loaded["generatedAt"] == "2026-08-12T07:00:00+00:00"
     assert loaded["season"] == "2026-27"
     assert (pipedata / "run_log.txt").exists()
+    run_log = (pipedata / "run_log.txt").read_text(encoding="utf-8")
+    assert any(line.startswith("matching Inter:") for line in run_log.splitlines())
 
     # Il percorso REALE deve essere esercitato: se get_player_season_stats
     # tornasse ancora l'envelope {"statistics": {...}} (bug pre-fix, il

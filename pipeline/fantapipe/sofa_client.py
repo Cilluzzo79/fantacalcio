@@ -1,6 +1,15 @@
 import json
 import subprocess
+import time
 from fantapipe import config
+
+# sofascore-pp-cli e' invocato come processo fresco a ogni chiamata: il suo
+# rate limiter interno (se esiste) non ha stato tra un processo e l'altro,
+# quindi una sequenza fitta di chiamate puo' superare il rate limit lato
+# SofaScore. Questo spacing minimo a livello di processo Python fa da
+# assicurazione. Nei test va azzerato (vedi tests/conftest.py) per non
+# rallentare la suite.
+CALL_SPACING_S = 0.35
 
 
 class SofaCliError(Exception):
@@ -10,6 +19,7 @@ class SofaCliError(Exception):
 
 
 def run_cli(args: list[str]) -> dict | list:
+    time.sleep(CALL_SPACING_S)
     cmd = [str(config.SOFA_CLI), *args, "--agent"]
     proc = subprocess.run(cmd, capture_output=True, text=True,
                           encoding="utf-8", timeout=120)
