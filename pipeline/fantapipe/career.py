@@ -98,18 +98,44 @@ def fetch_career(sofa_id: int, client=sofa_client,
                             season["id"], season["year"],
                             t.get("uniqueTournament", {}).get("id")))
 
-    # Un anno = una voce sola: fra le competizioni dello stesso anno vince
-    # quella con priorita' piu' bassa (campionato noto > campionato ignoto >
-    # coppa/nazionale). min() e' stabile: a parita' di priorita' vince la
-    # prima incontrata nell'ordine restituito da get_player_seasons.
-    by_year = {}
-    for entry in entries:
-        by_year.setdefault(entry[0], []).append(entry)
+    # Fix round 2 post-review (2026-08-13): la versione "un anno = una voce
+    # con fallback" del round 1 aveva ancora un difetto — ad agosto un
+    # giocatore di nazionale non ha ancora una voce di campionato per la
+    # nuova stagione (es. "26/27" non esiste finche' non parte il
+    # campionato), quindi l'anno-bucket piu' recente (es. "2026" per le
+    # qualificazioni mondiali) restava occupato SOLO dalla voce non-lega,
+    # scalzando una stagione di campionato vera dalle 4 slot e finendo con
+    # peso di recency massimo (Task 7) su una competizione non-campionato.
+    # Selezione "league-first": si prendono fino a MAX_SEASONS voci di
+    # campionato (priorita' <= 1), SENZA deduplicare per anno (un
+    # trasferimento di gennaio da un campionato a un altro nello stesso
+    # anno solare produce legittimamente due voci di campionato nello
+    # stesso anno, entrambe con segnale utile). Solo se le voci di
+    # campionato sono scarse (< 2) si aggiunge un fallback non-campionato
+    # (al massimo una voce per anno, anno piu' recente prima) fino ad
+    # arrivare a 2 voci totali o esaurire le opzioni.
+    league_entries = sorted(
+        (e for e in entries if _priority(e[1]) <= 1),
+        key=lambda e: e[0], reverse=True,
+    )[:MAX_SEASONS]
 
-    selected = [
-        min(by_year[year_key], key=lambda e: _priority(e[1]))
-        for year_key in sorted(by_year, reverse=True)[:MAX_SEASONS]
-    ]
+    selected = list(league_entries)
+    if len(selected) < 2:
+        covered_years = {e[0] for e in selected}
+        seen_fallback_years = set()
+        fallback_entries = sorted(
+            (e for e in entries if _priority(e[1]) == 2),
+            key=lambda e: e[0], reverse=True,
+        )
+        for e in fallback_entries:
+            if len(selected) >= 2:
+                break
+            year_key = e[0]
+            if year_key in covered_years or year_key in seen_fallback_years:
+                continue
+            seen_fallback_years.add(year_key)
+            selected.append(e)
+        selected.sort(key=lambda e: e[0], reverse=True)
 
     seasons = []
     for _, torneo, season_id, year, ut_id in selected:
