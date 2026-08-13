@@ -95,3 +95,29 @@ def test_get_player_seasons_raises_on_unexpected_shape(monkeypatch):
     monkeypatch.setattr(sofa_client, "run_cli", lambda args: {"results": {"typesMap": {}}})
     with pytest.raises(SofaCliError):
         sofa_client.get_player_seasons(363856)
+
+
+def test_get_player_season_stats_unwraps_statistics_envelope(monkeypatch):
+    # Shape reale (scoperta 2026-08-13, nuovo endpoint CLI
+    # `player statistics get-player-season-statistics`):
+    # {"meta": {...}, "results": {"statistics": {...}, "team": {...}}}
+    payload = {"meta": {"source": "live"},
+               "results": {"statistics": {"appearances": 30, "goals": 5},
+                           "team": {"id": 2697, "name": "Inter"}}}
+    monkeypatch.setattr(sofa_client, "run_cli", lambda args: payload)
+    stats = sofa_client.get_player_season_stats(363856, 23, 76457)
+    assert stats == {"appearances": 30, "goals": 5}
+
+
+def test_get_player_season_stats_raises_on_unexpected_shape(monkeypatch):
+    # results presente ma senza "statistics": non deve restituire
+    # silenziosamente l'intero envelope come se fosse le statistiche.
+    monkeypatch.setattr(sofa_client, "run_cli", lambda args: {"results": {"team": {}}})
+    with pytest.raises(SofaCliError):
+        sofa_client.get_player_season_stats(363856, 23, 76457)
+
+
+def test_get_player_season_stats_raises_when_results_missing(monkeypatch):
+    monkeypatch.setattr(sofa_client, "run_cli", lambda args: {"unexpected": True})
+    with pytest.raises(SofaCliError):
+        sofa_client.get_player_season_stats(363856, 23, 76457)

@@ -28,23 +28,23 @@ def run_cli(args: list[str]) -> dict | list:
 #   `which "tournament top players season statistics"`, che indicizzano solo
 #   `player statistics get-player-seasons` e `unique-tournament season
 #   get-tournament-top-players`.
-# - Si usa quindi il FALLBACK documentato nel brief:
-#   `unique-tournament season get-tournament-top-players <utId> <seasonId>`
-#   (verificato con `--help`: firma `<uniqueTournamentId> <seasonId>`, testato
-#   live con ut=23 (Serie A) e season=76457 -> risponde con le classifiche per
-#   statistica, vedi nota in fondo al modulo). Il filtro per player_id sui
-#   risultati aggregati avviene a valle, in career.py (Task 5).
+#
+# Aggiornamento (2026-08-13): il CLI e' stato esteso (generato da sorgente Go
+# locale) e ora espone un vero endpoint per-player/per-season:
+#   `player statistics get-player-season-statistics <playerId> <uniqueTournamentId> <seasonId>`
+# Verificato live (Barella 363856, ut 23, season 76457) -> risponde con
+# {"meta": {...}, "results": {"statistics": {...115 chiavi...}, "team": {...}}}.
+# Il vecchio fallback su `unique-tournament season get-tournament-top-players`
+# (classifiche top-50 per statistica, non una riga aggregata per giocatore)
+# non serve piu' ed e' stato rimosso da qui.
 def _cmd_team_squad(team_id):      return ["team", "players", "get-team", str(team_id)]
 def _cmd_search(query):            return ["sofascore-search", "--q", query]
 def _cmd_player(player_id):        return ["player", str(player_id)]
 def _cmd_player_seasons(player_id):
     return ["player", "statistics", "get-player-seasons", str(player_id)]
 def _cmd_player_season_stats(player_id, ut_id, season_id):
-    # Fallback: nessun endpoint CLI per season-stats del singolo giocatore
-    # (vedi nota sopra). player_id non entra nella chiamata: il filtro
-    # avviene a valle sulla lista aggregata restituita.
-    return ["unique-tournament", "season", "get-tournament-top-players",
-            str(ut_id), str(season_id)]
+    return ["player", "statistics", "get-player-season-statistics",
+            str(player_id), str(ut_id), str(season_id)]
 
 
 def get_team_squad(team_id: int) -> list[dict]:
@@ -94,9 +94,18 @@ def get_player_seasons(player_id: int) -> list[dict]:
 
 
 def get_player_season_stats(player_id: int, ut_id: int, season_id: int) -> dict:
-    # Fallback: restituisce le classifiche aggregate dell'intero
-    # torneo/stagione (results.topPlayers, un dict per statistica: goals,
-    # assists, rating, ... ognuna con i top-50 giocatori). Il filtro per
-    # player_id avviene in career.py (Task 5), che deve scandire le varie
-    # categorie statistiche cercando l'id del giocatore.
-    return run_cli(_cmd_player_season_stats(player_id, ut_id, season_id))
+    # Shape reale: {"meta": {...}, "results": {"statistics": {...}, "team": {...}}}
+    # Restituisce direttamente il dict statistics (una riga aggregata per
+    # giocatore/torneo/stagione); career.py legge le chiavi direttamente da qui.
+    cmd = _cmd_player_season_stats(player_id, ut_id, season_id)
+    data = run_cli(cmd)
+    results = data.get("results") if isinstance(data, dict) else None
+    if not isinstance(results, dict) or "statistics" not in results:
+        raise SofaCliError(
+            cmd, 0,
+            f"unexpected response shape for get_player_season_stats("
+            f"{player_id}, {ut_id}, {season_id}): expected results.statistics, "
+            f"got top-level keys "
+            f"{list(data.keys()) if isinstance(data, dict) else type(data).__name__}",
+        )
+    return results["statistics"]
