@@ -46,11 +46,22 @@ EXCLUDE_KEYWORDS = ("cup", "copp", "copa", "super cup", "qual", "world cup",
                     "europa league", "conference league", "olymp", "africa cup")
 
 
+# Fix round 3 post-review (2026-08-13): UEFA Champions League / Europa
+# League erano gia' in config.LEAGUE_COEFF (con un coefficiente reale, cosi'
+# se mai selezionate via fallback pesano correttamente), quindi il vecchio
+# ordine dei controlli ("prima LEAGUE_COEFF") le classificava priorita' 0
+# ("campionato noto") ANCHE come selezione primaria — poche partite a
+# stagione che avrebbero falsato titolarita'/durability esattamente come le
+# qualificazioni mondiali (il bug del round 2). EXCLUDE_KEYWORDS include
+# gia' "champions league"/"europa league"/"conference league": ora si
+# controlla PRIMA, cosi' restano priorita' 2 (selezionabili solo via
+# fallback in caso di scarsita' di campionato) mentre config.LEAGUE_COEFF
+# resta invariato per il coefficiente quando quel fallback scatta.
 def _priority(torneo: str) -> int:
+    if any(k in torneo.lower() for k in EXCLUDE_KEYWORDS):
+        return 2  # coppa/nazionale/competizione UEFA — mai preferita ai campionati
     if torneo in config.LEAGUE_COEFF:
         return 0  # campionato noto
-    if any(k in torneo.lower() for k in EXCLUDE_KEYWORDS):
-        return 2  # coppa/nazionale/competizione non-campionato
     return 1      # campionato sconosciuto (es. lega estera minore) — batte le coppe
 
 

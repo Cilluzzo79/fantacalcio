@@ -157,6 +157,29 @@ def test_barella_like_excludes_wc_qual_when_enough_league_seasons(tmp_path):
     assert [s.season for s in seasons] == ["25/26", "24/25", "23/24"]
 
 
+def test_excludes_champions_league_when_enough_league_seasons(tmp_path):
+    # Round 3 fix: UEFA Champions League e' gia' in config.LEAGUE_COEFF
+    # (coefficiente 1.10) ma poche partite a stagione la rendono un segnale
+    # di titolarita'/durability fuorviante come primaria — stesso problema
+    # delle qualificazioni mondiali del round 2. EXCLUDE_KEYWORDS viene
+    # controllato PRIMA di LEAGUE_COEFF in _priority: la Champions resta
+    # priorita' 2 (mai scelta come selezione primaria quando ci sono
+    # abbastanza stagioni di campionato).
+    raw_seasons = [
+        {"uniqueTournament": {"id": 23, "name": "Serie A"},
+         "seasons": [{"id": 700, "year": "25/26"}, {"id": 600, "year": "24/25"},
+                     {"id": 500, "year": "23/24"}]},
+        {"uniqueTournament": {"id": 7, "name": "UEFA Champions League"},
+         "seasons": [{"id": 701, "year": "25/26"}, {"id": 601, "year": "24/25"}]},
+    ]
+    class C(FakeClient):
+        def get_player_seasons(self, pid):
+            return raw_seasons
+    seasons = career.fetch_career(10, client=C(), cache_dir=tmp_path)
+    assert [s.torneo for s in seasons] == ["Serie A", "Serie A", "Serie A"]
+    assert [s.season for s in seasons] == ["25/26", "24/25", "23/24"]
+
+
 def test_january_transfer_same_year_both_kept(tmp_path):
     # Trasferimento di gennaio: due voci di campionato nello stesso anno
     # solare (Premier League + Serie A, entrambe 25/26) sono entrambe
