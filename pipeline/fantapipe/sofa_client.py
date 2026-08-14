@@ -9,7 +9,11 @@ from fantapipe import config
 # SofaScore. Questo spacing minimo a livello di processo Python fa da
 # assicurazione. Nei test va azzerato (vedi tests/conftest.py) per non
 # rallentare la suite.
-CALL_SPACING_S = 0.35
+# 2026-08-14: alzato da 0.35 a 1.0 — nella prima run reale, dopo qualche
+# centinaio di chiamate ravvicinate, SofaScore e' passato a 403 "challenge"
+# bloccando il resto del fetch carriere (262/499 completate). Il costo e'
+# ~30 min a run piena, irrilevante per un job settimanale schedulato.
+CALL_SPACING_S = 1.0
 
 
 class SofaCliError(Exception):
