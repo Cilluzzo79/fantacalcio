@@ -40,7 +40,7 @@ Assistente per le aste del fantacalcio Serie A (modalità **Classic**), uso pers
 ### A. Prima run reale ✅ PUBBLICATA (2026-08-14)
 Il **raw URL è vivo** (HTTP 200): dataset da listone Gazzetta con 577 giocatori (479 con stagioni reali, matching 498/577, carriere 487/498=98%), 20 allenatori. Checklist completata: matching_report rivisto (11 dubbi attesi, gemelli OYONO ok), portiere verificato (golSubiti/cleanSheet/rigParati presenti), publish diretto via `publish_dataset()` (la run con publish integrata era ri-bloccata dal challenge — v. gotcha §5).
 
-**Refinement pendente (non bloccante)**: override per i ~78 non matchati, tra cui big (LUKAKU, DOVBYK, OPENDA, YILDIZ, GOSENS, ANGELINO, BELOTTI, BENNACER, CASTRO...) — proposta da costruire con `sofascore-search` quando il challenge decade, poi revisione utente, poi re-run+publish (o si aggiorna col job settimanale).
+**Override applicate il 2026-08-14 (25, approvate dall'utente)**: `pipeline\data\matching_overrides.csv` (gitignorato, vive solo su questo PC — da rifare a mano se si perde). Matching salito a **522/577 (90%)**, carriere 516/522 (99%), dataset ripubblicato. Correzione notevole: il portiere MARTINEZ (Inter) era matchato all'id di Lautaro; ora Josep=845291, Lautaro=823984. Non risolto: MARIO (Juventus, D) — 3 candidati plausibili (João Mário ×2, Mario Gila), deciso di lasciarlo su fallback qta. I restanti ~50 non matchati sono low-cost (fallback qta accettabile).
 
 ### B. Fix scheduler ✅ (2026-08-14)
 `pipeline/run_weekly.ps1`: il merge stdout/stderr ora lo fa `cmd /c` (PowerShell 5.1 con EAP=Stop trasformava stderr benigno in falso "ERRORE" — riprodotto empiricamente prima e dopo il fix, inclusa la propagazione dei veri exit code ≠ 0).
