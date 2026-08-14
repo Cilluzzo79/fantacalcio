@@ -16,8 +16,16 @@ import { Screen } from "../../ui/Screen";
 import { PlayerRow, PLAYER_ROW_HEIGHT } from "../../components/PlayerRow";
 import { AuctionTopBar } from "../../components/AuctionTopBar";
 import { BidSheet, type BidSheetSubject } from "../../components/BidSheet";
+import { PurchaseLog } from "../../components/PurchaseLog";
+import { TeamsBoard } from "../../components/TeamsBoard";
 
 type Mode = "players" | "coaches";
+type Panel = "asta" | "registro" | "rose";
+
+const PANEL_OPTIONS: { key: Panel; label: string }[] =
+  [{ key: "asta", label: "ASTA" }, { key: "registro", label: "REGISTRO" }, { key: "rose", label: "ROSE" }];
+const MODE_OPTIONS: { key: Mode; label: string }[] =
+  [{ key: "players", label: "GIOCATORI" }, { key: "coaches", label: "ALLENATORI" }];
 
 export default function Asta() {
   const dataset = useDataset(s => s.dataset);
@@ -32,6 +40,7 @@ export default function Asta() {
   const league = leagues.find(l => l.id === activeLeagueId) ?? null;
   const auction = league ? getAuction(league.id) : null;
 
+  const [panel, setPanel] = useState<Panel>("asta");
   const [mode, setMode] = useState<Mode>("players");
   const [text, setText] = useState("");
   const [showSold, setShowSold] = useState(false);
@@ -181,59 +190,75 @@ export default function Asta() {
     <Screen padded={false}>
       <AuctionTopBar summary={activeSummary} />
 
-      <View style={{ paddingHorizontal: spacing(4), paddingTop: spacing(3), gap: spacing(2.5) }}>
-        {coachesEnabled && <ModeSegment value={mode} onChange={setMode} />}
-
-        <TextInput
-          placeholder={mode === "players" ? "Cerca giocatore" : "Cerca allenatore"}
-          placeholderTextColor={colors.textDim}
-          value={text} onChangeText={setText}
-          style={{ borderWidth: 1, borderColor: colors.line, borderRadius: radius.md,
-            paddingHorizontal: spacing(3), paddingVertical: spacing(2.5),
-            color: colors.text, fontFamily: fonts.body }} />
-
-        {mode === "players" && (
-          <Pressable onPress={() => setShowSold(v => !v)}
-            style={{ flexDirection: "row", alignItems: "center", gap: spacing(1.5) }}>
-            <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1,
-              borderColor: colors.line,
-              backgroundColor: showSold ? colors.accent : "transparent" }} />
-            <T variant="dim">Mostra venduti</T>
-          </Pressable>
-        )}
+      <View style={{ paddingHorizontal: spacing(4), paddingTop: spacing(3) }}>
+        <Segment value={panel} onChange={p => setPanel(p)} options={PANEL_OPTIONS} />
       </View>
 
-      {mode === "players" ? (
-        <FlatList
-          data={playerRows}
-          keyExtractor={p => String(p.id)}
-          style={{ marginTop: spacing(3) }}
-          contentContainerStyle={{ paddingHorizontal: spacing(4), paddingBottom: spacing(8) }}
-          getItemLayout={(_, index) =>
-            ({ length: PLAYER_ROW_HEIGHT, offset: PLAYER_ROW_HEIGHT * index, index })}
-          initialNumToRender={20}
-          renderItem={({ item }) => (
-            <PlayerRow player={item} prezzo={prezzoFn(item.id)}
-              venduto={soldIds.has(item.id)}
-              onPress={() => onPressPlayer(item)} />
+      {panel === "asta" && (
+        <>
+          <View style={{ paddingHorizontal: spacing(4), paddingTop: spacing(3), gap: spacing(2.5) }}>
+            {coachesEnabled && <Segment value={mode} onChange={m => setMode(m)} options={MODE_OPTIONS} />}
+
+            <TextInput
+              placeholder={mode === "players" ? "Cerca giocatore" : "Cerca allenatore"}
+              placeholderTextColor={colors.textDim}
+              value={text} onChangeText={setText}
+              style={{ borderWidth: 1, borderColor: colors.line, borderRadius: radius.md,
+                paddingHorizontal: spacing(3), paddingVertical: spacing(2.5),
+                color: colors.text, fontFamily: fonts.body }} />
+
+            {mode === "players" && (
+              <Pressable onPress={() => setShowSold(v => !v)}
+                style={{ flexDirection: "row", alignItems: "center", gap: spacing(1.5) }}>
+                <View style={{ width: 18, height: 18, borderRadius: 4, borderWidth: 1,
+                  borderColor: colors.line,
+                  backgroundColor: showSold ? colors.accent : "transparent" }} />
+                <T variant="dim">Mostra venduti</T>
+              </Pressable>
+            )}
+          </View>
+
+          {mode === "players" ? (
+            <FlatList
+              data={playerRows}
+              keyExtractor={p => String(p.id)}
+              style={{ marginTop: spacing(3) }}
+              contentContainerStyle={{ paddingHorizontal: spacing(4), paddingBottom: spacing(8) }}
+              getItemLayout={(_, index) =>
+                ({ length: PLAYER_ROW_HEIGHT, offset: PLAYER_ROW_HEIGHT * index, index })}
+              initialNumToRender={20}
+              renderItem={({ item }) => (
+                <PlayerRow player={item} prezzo={prezzoFn(item.id)}
+                  venduto={soldIds.has(item.id)}
+                  onPress={() => onPressPlayer(item)} />
+              )}
+              ListEmptyComponent={
+                <T variant="dim" style={{ marginTop: spacing(6), textAlign: "center" }}>
+                  Nessun giocatore trovato.</T>
+              } />
+          ) : (
+            <FlatList
+              data={coachRows}
+              keyExtractor={c => `${c.nome}|${c.squadra}`}
+              style={{ marginTop: spacing(3) }}
+              contentContainerStyle={{ paddingHorizontal: spacing(4), paddingBottom: spacing(8) }}
+              renderItem={({ item }) => (
+                <CoachRow coach={item} onPress={() => onPressCoach(item)} />
+              )}
+              ListEmptyComponent={
+                <T variant="dim" style={{ marginTop: spacing(6), textAlign: "center" }}>
+                  Nessun allenatore trovato.</T>
+              } />
           )}
-          ListEmptyComponent={
-            <T variant="dim" style={{ marginTop: spacing(6), textAlign: "center" }}>
-              Nessun giocatore trovato.</T>
-          } />
-      ) : (
-        <FlatList
-          data={coachRows}
-          keyExtractor={c => `${c.nome}|${c.squadra}`}
-          style={{ marginTop: spacing(3) }}
-          contentContainerStyle={{ paddingHorizontal: spacing(4), paddingBottom: spacing(8) }}
-          renderItem={({ item }) => (
-            <CoachRow coach={item} onPress={() => onPressCoach(item)} />
-          )}
-          ListEmptyComponent={
-            <T variant="dim" style={{ marginTop: spacing(6), textAlign: "center" }}>
-              Nessun allenatore trovato.</T>
-          } />
+        </>
+      )}
+
+      {panel === "registro" && (
+        <PurchaseLog league={activeLeague} auction={activeAuction} playersById={playersById} />
+      )}
+
+      {panel === "rose" && (
+        <TeamsBoard league={activeLeague} auction={activeAuction} playersById={playersById} />
       )}
 
       <BidSheet visible={subject !== null} subject={subject}
@@ -245,13 +270,13 @@ export default function Asta() {
   );
 }
 
-function ModeSegment({ value, onChange }: { value: Mode; onChange(v: Mode): void }) {
-  const opts: { key: Mode; label: string }[] =
-    [{ key: "players", label: "GIOCATORI" }, { key: "coaches", label: "ALLENATORI" }];
+function Segment<Key extends string>({ value, onChange, options }: {
+  value: Key; onChange(v: Key): void; options: { key: Key; label: string }[];
+}) {
   return (
     <View style={{ flexDirection: "row", borderWidth: 1, borderColor: colors.line,
       borderRadius: radius.md, overflow: "hidden" }}>
-      {opts.map((o, i) => {
+      {options.map((o, i) => {
         const active = value === o.key;
         return (
           <Pressable key={o.key} onPress={() => onChange(o.key)}
