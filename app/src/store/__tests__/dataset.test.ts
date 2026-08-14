@@ -84,3 +84,31 @@ test("asta in corso e nessun dataset locale -> missing, senza chiamare la rete",
   expect(fetchSpy).not.toHaveBeenCalled();
   expect(useDataset.getState().status).toBe("missing");
 });
+
+test("refresh fallito espone un reason leggibile e non azzera il dataset", async () => {
+  // deps con fetch che lancia (offline)
+  const deps = {
+    fetchFn: (() => { throw new Error("network request failed"); }) as any,
+    readFile: async () => null,
+    writeFile: async () => {},
+  };
+  useDataset.setState({ dataset: miniDataset(), status: "ready", lastError: null });
+  const updated = await useDataset.getState().refresh(deps);
+  expect(updated).toBe(false);
+  expect(useDataset.getState().dataset).not.toBeNull();
+  expect(useDataset.getState().lastError).toMatch(/offline|rete|network/i);
+});
+
+test("refresh riuscito azzera lastError e aggiorna lastChecked", async () => {
+  const ds = miniDataset();
+  const deps = {
+    fetchFn: (async () => ({ ok: true, json: async () => ds })) as any,
+    readFile: async () => null,
+    writeFile: async () => {},
+  };
+  useDataset.setState({ dataset: null, status: "loading",
+    lastError: "vecchio errore" });
+  await useDataset.getState().refresh(deps);
+  expect(useDataset.getState().lastError).toBeNull();
+  expect(useDataset.getState().lastChecked).toBeTruthy();
+});
