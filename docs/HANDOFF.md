@@ -37,15 +37,10 @@ Assistente per le aste del fantacalcio Serie A (modalità **Classic**), uso pers
 
 ## 3. Cosa MANCA (in ordine)
 
-### A. Prima run reale della pipeline — ⏳ bloccata da 403 SofaScore (2026-08-14)
-**Il listone c'è**: PDF Gazzetta "fantacampionato" (fornito dall'utente il 2026-08-14), scaricato in `pipeline\data\listone\listone_gazzetta_2026-08-14.pdf` e integrato in pipeline (v. sezione 2, "Listone Gazzetta"). Le credenziali Fantacalcio.it NON servono più.
+### A. Prima run reale ✅ PUBBLICATA (2026-08-14)
+Il **raw URL è vivo** (HTTP 200): dataset da listone Gazzetta con 577 giocatori (479 con stagioni reali, matching 498/577, carriere 487/498=98%), 20 allenatori. Checklist completata: matching_report rivisto (11 dubbi attesi, gemelli OYONO ok), portiere verificato (golSubiti/cleanSheet/rigParati presenti), publish diretto via `publish_dataset()` (la run con publish integrata era ri-bloccata dal challenge — v. gotcha §5).
 
-La prima run (`--skip-publish`, ~30-60 min per ~577 carriere) è stata lanciata ma **l'API SofaScore risponde 403 su TUTTI gli endpoint** (anche `api.sofascore.app`, anche con header browser-like in `C:\Users\Mauro\.config\sofascore-pp-cli\config.toml`): probabile blocco IP temporaneo (il 13/08 funzionava). Riprovare più tardi:
-```powershell
-cd D:\railway\fantacalcio\pipeline
-.venv\Scripts\python -m fantapipe.cli --listone data\listone\listone_gazzetta_2026-08-14.pdf --skip-publish
-```
-Poi: revisione `matching_report.csv` (attesi: i gemelli "OYONO"/"OYONO (2)" al Frosinone, v. README), verifica statistiche di un PORTIERE reale (golSubiti presenti), run con publish e check del raw URL.
+**Refinement pendente (non bloccante)**: override per i ~78 non matchati, tra cui big (LUKAKU, DOVBYK, OPENDA, YILDIZ, GOSENS, ANGELINO, BELOTTI, BENNACER, CASTRO...) — proposta da costruire con `sofascore-search` quando il challenge decade, poi revisione utente, poi re-run+publish (o si aggiorna col job settimanale).
 
 ### B. Fix scheduler ✅ (2026-08-14)
 `pipeline/run_weekly.ps1`: il merge stdout/stderr ora lo fa `cmd /c` (PowerShell 5.1 con EAP=Stop trasformava stderr benigno in falso "ERRORE" — riprodotto empiricamente prima e dopo il fix, inclusa la propagazione dei veri exit code ≠ 0).
@@ -75,7 +70,9 @@ Poi: revisione `matching_report.csv` (attesi: i gemelli "OYONO"/"OYONO (2)" al F
 6. **Priorità suggerita**: sbloccare §3A (serve l'utente) → §3B (un ok) → scrivere ed eseguire il Piano 2b.
 
 ## 5. Gotcha noti
-- API SofaScore: 403 ai client non-browser; passare SEMPRE dal CLI (`--agent`, rate limit 2 req/s; `run_cli` ha spacing 0.35s perché ogni chiamata è un processo nuovo). Il 2026-08-14 l'API ha bloccato TUTTO (403 anche via CLI): se ricapita è quasi certamente un blocco IP temporaneo — aspettare e riprovare; gli header custom si configurano in `C:\Users\Mauro\.config\sofascore-pp-cli\config.toml` (`[headers]`).
+- API SofaScore, DUE modi di fallire con 403 (imparati il 2026-08-14):
+  1. **`403 Forbidden` su tutto, subito** → quasi certamente c'è la **VPN CyberGhost attiva** (esce da IP datacenter CDN77 che SofaScore blocca a prescindere). Controllare `Get-NetAdapter` per `CyberGhost-WireGuard-1`: la VPN va spenta prima di ogni run (occhio al job del lunedì 09:00!). Header custom eventuali in `C:\Users\Mauro\.config\sofascore-pp-cli\config.toml` (`[headers]`).
+  2. **`403 "challenge"` a metà run** → protezione anti-bot da volume: decade da solo in ~1-2 ore. Lo spacing è già 1s (`CALL_SPACING_S`); le carriere già prese sono in cache (`pipeline\cache\players\`), quindi basta rilanciare e si converge. Se serve solo pubblicare un dataset già scritto e validato, usare direttamente `publish_dataset()` senza rifare la pipeline (zero chiamate API).
 - Il listone Gazzetta è un PDF a due colonne: il parser (`listone_gazzetta.py`) legge colonna sinistra poi destra; gli id giocatore sono hash stabili di (ruolo, nome, squadra) — un trasferimento cambia l'id e invalida l'eventuale riga in `matching_overrides.csv`.
 - Il repo è PUBBLICO: mai committare `.env`, credenziali, `pipeline/data/`, `.superpowers/` (già in .gitignore).
 - `generatedAt` si confronta come stringa ISO (ok finché la pipeline emette UTC `isoformat(timespec="seconds")`).

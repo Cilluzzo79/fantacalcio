@@ -40,7 +40,7 @@ The generated dataset is published to GitHub (repo `Cilluzzo79/fantacalcio`, bra
 https://raw.githubusercontent.com/Cilluzzo79/fantacalcio/master/data/dataset.json
 ```
 
-**Note:** `data/dataset.json` does not yet exist in the repo (the first real pipeline run is pending), so the URL above currently responds with 404 — this is expected. It will become available after the first real run that executes `fantapipe.cli` with `--skip-publish` omitted (publishing enabled).
+**Note:** first published on 2026-08-14 (577 players from the Gazzetta listone, 479 with real season stats, 20 coaches). The weekly scheduled run keeps it fresh.
 
 ## Matching Doubts & Overrides
 
