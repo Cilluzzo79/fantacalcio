@@ -16,7 +16,7 @@ interface LeaguesState {
   leagues: League[];
   activeLeagueId: string | null;
   createLeague(input: CreateInput): League;
-  updateLeague(id: string, patch: Partial<Pick<League, "nome" | "slots" | "myTeamIndex">>): void;
+  updateLeague(id: string, patch: Partial<Pick<League, "nome" | "slots" | "myTeamIndex" | "useCoaches">>): void;
   setTeamRoster(leagueId: string, teamId: string,
     roster: { playerId: number; prezzo: number }[], creditiResidui: number): void;
   deleteLeague(id: string): void;

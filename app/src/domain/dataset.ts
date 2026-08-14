@@ -34,5 +34,13 @@ export function parseDataset(json: unknown): Dataset {
     fail("generatedAt/season mancanti");
   if (!Array.isArray(d.players) || d.players.length === 0) fail("players mancanti o vuoti");
   d.players.forEach(checkPlayer);
+  if (d.allenatori !== undefined) {
+    if (!Array.isArray(d.allenatori)) fail("allenatori non è un array");
+    d.allenatori.forEach((c: any, i: number) => {
+      if (typeof c?.nome !== "string" || typeof c?.squadra !== "string"
+        || typeof c?.qta !== "number")
+        fail(`allenatori[${i}] malformato`);
+    });
+  }
   return d as Dataset;
 }

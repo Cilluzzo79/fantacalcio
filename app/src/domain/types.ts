@@ -15,9 +15,12 @@ export interface Player {
   traits: string[]; note: string[]; seasons: SeasonRow[];
 }
 
+export interface Coach { nome: string; squadra: string; qta: number; }
+
 export interface Dataset {
   schemaVersion: 1; generatedAt: string; season: string; quotazioniFile: string;
   players: Player[];
+  allenatori?: Coach[];
 }
 
 export interface TeamConfig {
@@ -33,6 +36,7 @@ export interface League {
   teams: TeamConfig[];             // teams[myTeamIndex] è l'utente
   myTeamIndex: number;
   createdAt: string;               // ISO
+  useCoaches?: boolean;
 }
 
 export interface Purchase {
@@ -40,4 +44,12 @@ export interface Purchase {
   playerId: number; teamId: string; prezzo: number; ts: string;
 }
 
-export interface AuctionState { leagueId: string; purchases: Purchase[]; }
+export interface CoachPurchase {
+  id: string; teamId: string; nome: string; squadra: string;
+  prezzo: number; ts: string;
+}
+
+export interface AuctionState {
+  leagueId: string; purchases: Purchase[];
+  coaches?: CoachPurchase[];
+}

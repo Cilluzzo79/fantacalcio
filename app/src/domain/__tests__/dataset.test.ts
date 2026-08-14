@@ -34,3 +34,12 @@ test("rifiuta non-oggetti", () => {
   expect(() => parseDataset("ciao")).toThrow(DatasetError);
   expect(() => parseDataset(null)).toThrow(DatasetError);
 });
+
+test("parseDataset accetta e valida la chiave opzionale allenatori", () => {
+  const base = miniDataset() as any;
+  expect(parseDataset(base)).toBeTruthy(); // senza chiave: ok
+  base.allenatori = [{ nome: "CHIVU", squadra: "Inter", qta: 30 }];
+  expect(parseDataset(base).allenatori).toHaveLength(1);
+  base.allenatori = [{ nome: "CHIVU" }]; // malformato
+  expect(() => parseDataset(base)).toThrow(/allenatori/);
+});

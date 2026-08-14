@@ -5,6 +5,7 @@ import type { AuctionState, League, Player } from "../domain/types";
 import {
   emptyAuction, registerPurchase, undoLast, removePurchase, editPurchase,
 } from "../domain/auction";
+import { registerCoach, removeCoach } from "../domain/coach";
 
 interface AuctionsStore {
   byLeague: Record<string, AuctionState>;
@@ -17,6 +18,10 @@ interface AuctionsStore {
     purchaseId: string, patch: { teamId?: string; prezzo?: number },
     opts?: { force?: boolean }): void;
   resetAuction(leagueId: string): void;
+  purchaseCoach(leagueId: string, league: League, players: Map<number, Player>,
+    c: { teamId: string; nome: string; squadra: string; prezzo: number },
+    opts?: { force?: boolean }): void;
+  removeCoach(leagueId: string, coachId: string): void;
 }
 
 // cache module-level: garantisce che getAuction ritorni SEMPRE lo stesso
@@ -63,6 +68,14 @@ export const useAuctions = create<AuctionsStore>()(
           delete byLeague[leagueId];
           return { byLeague };
         });
+      },
+      purchaseCoach(leagueId, league, players, c, opts) {
+        const next = registerCoach(get().getAuction(leagueId), league, players, c, opts);
+        set(s => ({ byLeague: { ...s.byLeague, [leagueId]: next } }));
+      },
+      removeCoach(leagueId, coachId) {
+        const next = removeCoach(get().getAuction(leagueId), coachId);
+        set(s => ({ byLeague: { ...s.byLeague, [leagueId]: next } }));
       },
     }),
     { name: "fanta-auctions", storage: createJSONStorage(() => AsyncStorage) },

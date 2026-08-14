@@ -15,7 +15,9 @@ export function teamSummary(state: AuctionState, league: League,
   if (!team) throw new AuctionError("squadra sconosciuta");
   const acquisti = state.purchases.filter(p => p.teamId === teamId);
   const spesi = acquisti.reduce((a, p) => a + p.prezzo, 0);
-  const residui = team.crediti - spesi;
+  const coachSpesa = (state.coaches ?? [])
+    .filter(c => c.teamId === teamId).reduce((a, c) => a + c.prezzo, 0);
+  const residui = team.crediti - spesi - coachSpesa;
   const slotLiberi = {} as Record<Ruolo, number>;
   for (const r of RUOLI) {
     const iniziali = team.rosterIniziale
@@ -24,12 +26,15 @@ export function teamSummary(state: AuctionState, league: League,
     slotLiberi[r] = league.slots[r] - iniziali - comprati;
   }
   const slotTot = RUOLI.reduce((a, r) => a + slotLiberi[r], 0);
-  const maxOfferta = Math.max(0, residui - Math.max(0, slotTot - 1));
+  const needCoach = league.useCoaches === true
+    && !(state.coaches ?? []).some(c => c.teamId === teamId);
+  const maxOfferta = Math.max(0,
+    residui - Math.max(0, slotTot + (needCoach ? 1 : 0) - 1));
   const rosa = [
     ...team.rosterIniziale,
     ...acquisti.map(p => ({ playerId: p.playerId, prezzo: p.prezzo })),
   ];
-  return { spesi, residui, slotLiberi, maxOfferta, rosa };
+  return { spesi, residui, slotLiberi, maxOfferta, rosa, coachSpesa, needCoach };
 }
 
 export function registerPurchase(state: AuctionState, league: League,
