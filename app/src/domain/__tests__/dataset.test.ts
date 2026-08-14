@@ -3,7 +3,7 @@ import { miniDataset } from "./fixtures";
 
 test("parseDataset accetta un dataset valido", () => {
   const ds = parseDataset(JSON.parse(JSON.stringify(miniDataset())));
-  expect(ds.players).toHaveLength(8);
+  expect(ds.players).toHaveLength(9);
   expect(ds.season).toBe("2026-27");
 });
 

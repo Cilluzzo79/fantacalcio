@@ -20,6 +20,7 @@ export function miniDataset(): Dataset {
       mkPlayer({ ruolo: "P", nome: "PortiereLow", valueScore: 5, fascia: "lowcost" }),
       mkPlayer({ ruolo: "D", nome: "DifTop", valueScore: 40, fascia: "top" }),
       mkPlayer({ ruolo: "D", nome: "DifLow", valueScore: 5, fascia: "lowcost" }),
+      mkPlayer({ ruolo: "D", nome: "DifMid", valueScore: 15, fascia: "titolare" }),
       mkPlayer({ ruolo: "C", nome: "CenTop", valueScore: 50, fascia: "top", traits: ["assistman"] }),
       mkPlayer({ ruolo: "C", nome: "CenLow", valueScore: 5, fascia: "lowcost" }),
       mkPlayer({ ruolo: "A", nome: "AttTop", valueScore: 80, fascia: "top", traits: ["rigorista"] }),

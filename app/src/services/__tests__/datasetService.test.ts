@@ -22,7 +22,7 @@ test("loadLocalDataset: null senza file, dataset col file", async () => {
   const { deps } = fakeDeps();
   expect(await loadLocalDataset(deps)).toBeNull();
   const withFile = fakeDeps({ "dataset.json": JSON.stringify(miniDataset()) });
-  expect((await loadLocalDataset(withFile.deps))!.players).toHaveLength(8);
+  expect((await loadLocalDataset(withFile.deps))!.players).toHaveLength(9);
 });
 
 test("refreshDataset scarica e salva se più recente", async () => {
@@ -60,7 +60,7 @@ test("offline e nessun corrente -> DatasetError", async () => {
 test("import da testo: valida e salva", async () => {
   const { files, deps } = fakeDeps();
   const ds = await importDatasetFromText(JSON.stringify(miniDataset()), deps);
-  expect(ds.players).toHaveLength(8);
+  expect(ds.players).toHaveLength(9);
   expect(files["dataset.json"]).toBeTruthy();
   await expect(importDatasetFromText("{}", deps)).rejects.toThrow();
 });
