@@ -6,6 +6,8 @@ import { useAuctions } from "./auctions";
 interface DatasetStore {
   dataset: Dataset | null;
   status: "loading" | "ready" | "missing";
+  lastError: string | null;
+  lastChecked: string | null;
   boot(deps?: Deps): Promise<void>;
   refresh(deps?: Deps): Promise<boolean>;
 }
@@ -18,6 +20,8 @@ function midAuctionInCorso(): boolean {
 export const useDataset = create<DatasetStore>()((set, get) => ({
   dataset: null,
   status: "loading",
+  lastError: null,
+  lastChecked: null,
   async boot(deps) {
     let local: Dataset | null = null;
     try {
@@ -34,21 +38,27 @@ export const useDataset = create<DatasetStore>()((set, get) => ({
     }
 
     try {
-      const { dataset, updated } = await refreshDataset(local, deps);
-      set({ dataset, status: "ready" });
+      const { dataset, updated, reason } = await refreshDataset(local, deps);
+      set({ dataset, status: "ready", lastError: reason ?? null, lastChecked: new Date().toISOString() });
       void updated;
-    } catch {
-      if (!get().dataset) set({ status: "missing" });
+    } catch (e) {
+      set({ lastError: e instanceof Error ? e.message : "errore sconosciuto",
+        lastChecked: new Date().toISOString(),
+        ...(get().dataset ? {} : { status: "missing" as const }) });
     }
   },
   async refresh(deps) {
     const { dataset } = get();
     try {
       const res = await refreshDataset(dataset, deps);
-      set({ dataset: res.dataset, status: "ready" });
+      set({ dataset: res.dataset, status: "ready",
+        lastError: res.reason ?? null,
+        lastChecked: new Date().toISOString() });
       return res.updated;
-    } catch {
-      if (!get().dataset) set({ status: "missing" });
+    } catch (e) {
+      set({ lastError: e instanceof Error ? e.message : "errore sconosciuto",
+        lastChecked: new Date().toISOString(),
+        ...(get().dataset ? {} : { status: "missing" as const }) });
       return false;
     }
   },

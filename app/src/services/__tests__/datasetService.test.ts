@@ -54,7 +54,7 @@ test("offline: ritorna il corrente senza errori", async () => {
 
 test("offline e nessun corrente -> DatasetError", async () => {
   const { deps } = fakeDeps({}, new Error("network down"));
-  await expect(refreshDataset(null, deps)).rejects.toThrow(/dataset/i);
+  await expect(refreshDataset(null, deps)).rejects.toThrow(/offline|rete|network/i);
 });
 
 test("import da testo: valida e salva", async () => {

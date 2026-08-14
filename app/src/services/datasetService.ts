@@ -39,20 +39,24 @@ export async function loadLocalDataset(deps: Deps = defaultDeps()): Promise<Data
 }
 
 export async function refreshDataset(current: Dataset | null,
-  deps: Deps = defaultDeps()): Promise<{ dataset: Dataset; updated: boolean }> {
+  deps: Deps = defaultDeps()): Promise<{ dataset: Dataset; updated: boolean; reason?: string | null }> {
   let remote: Dataset | null = null;
+  let fetchErrorReason: string | null = null;
   try {
     const res = await deps.fetchFn(DATASET_URL);
     if (res.ok) remote = parseDataset(await res.json());
-  } catch {
-    remote = null; // offline o parse fallito: si prosegue col corrente
+    else fetchErrorReason = `il server ha risposto ${res.status}`;
+  } catch (e) {
+    fetchErrorReason = e instanceof DatasetError
+      ? `dataset remoto non valido: ${e.message}`
+      : "sei offline o la rete non risponde";
   }
   if (remote && (!current || remote.generatedAt > current.generatedAt)) {
     await deps.writeFile(LOCAL_PATH, JSON.stringify(remote));
-    return { dataset: remote, updated: true };
+    return { dataset: remote, updated: true, reason: null };
   }
-  if (current) return { dataset: current, updated: false };
-  throw new DatasetError("nessun dataset disponibile: scarica o importa il file");
+  if (current) return { dataset: current, updated: false, reason: fetchErrorReason };
+  throw new DatasetError(fetchErrorReason ?? "nessun dataset disponibile: scarica o importa il file");
 }
 
 export async function importDatasetFromText(text: string,
