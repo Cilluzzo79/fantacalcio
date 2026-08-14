@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Modal, Pressable, ScrollView, View } from "react-native";
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue,
+  withSequence, withTiming } from "react-native-reanimated";
 import type { BidAdvice } from "../domain/live";
 import type { Coach, Player, TeamConfig } from "../domain/types";
 import { AuctionError } from "../domain/auction";
@@ -166,17 +168,28 @@ function Numbers({ subject }: { subject: BidSheetSubject }) {
     return (
       <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between",
         marginBottom: spacing(4) }}>
-        <NumberStat label="Equo" value={advice.equoLive} fontSize={34} color={colors.text} />
-        <NumberStat label="Max tuo" value={advice.maxConsigliato} fontSize={56} color={colors.accent} />
-        <NumberStat label="Mio tetto" value={advice.mioMax} fontSize={16} color={colors.textDim} />
+        <Animated.View entering={FadeInDown.delay(0 * 60)}>
+          <NumberStat label="Equo" value={advice.equoLive} fontSize={34} color={colors.text} />
+        </Animated.View>
+        <Animated.View entering={FadeInDown.delay(1 * 60)}>
+          <PulsingNumberStat label="Max tuo" value={advice.maxConsigliato} fontSize={56}
+            color={colors.accent} />
+        </Animated.View>
+        <Animated.View entering={FadeInDown.delay(2 * 60)}>
+          <NumberStat label="Mio tetto" value={advice.mioMax} fontSize={16} color={colors.textDim} />
+        </Animated.View>
       </View>
     );
   }
   return (
     <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between",
       marginBottom: spacing(4) }}>
-      <NumberStat label="Qta" value={subject.coach.qta} fontSize={34} color={colors.text} />
-      <NumberStat label="Tetto" value={subject.maxOfferta} fontSize={56} color={colors.accent} />
+      <Animated.View entering={FadeInDown.delay(0 * 60)}>
+        <NumberStat label="Qta" value={subject.coach.qta} fontSize={34} color={colors.text} />
+      </Animated.View>
+      <Animated.View entering={FadeInDown.delay(1 * 60)}>
+        <NumberStat label="Tetto" value={subject.maxOfferta} fontSize={56} color={colors.accent} />
+      </Animated.View>
     </View>
   );
 }
@@ -190,6 +203,35 @@ function NumberStat({ label, value, fontSize, color }: {
       <T style={{ fontFamily: fonts.display, fontSize, color, fontVariant: ["tabular-nums"] }}>
         {value}</T>
     </View>
+  );
+}
+
+/** Come NumberStat, ma il valore fa un piccolo pulse (scale 1→1.06→1) ogni
+ * volta che cambia — il numero MAX TUO è quello che l'utente guarda di più
+ * durante l'asta, il pulse lo rende subito notabile senza essere invasivo.
+ * Non pulsa al primo render (quello è già coperto dal FadeInDown del wrapper). */
+function PulsingNumberStat({ label, value, fontSize, color }: {
+  label: string; value: number; fontSize: number; color: string;
+}) {
+  const scale = useSharedValue(1);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    scale.value = withSequence(
+      withTiming(1.06, { duration: 90 }),
+      withTiming(1, { duration: 120 }),
+    );
+  }, [value, scale]);
+
+  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={pulseStyle}>
+      <T variant="label">{label}</T>
+      <T style={{ fontFamily: fonts.display, fontSize, color, fontVariant: ["tabular-nums"] }}>
+        {value}</T>
+    </Animated.View>
   );
 }
 

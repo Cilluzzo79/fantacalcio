@@ -13,6 +13,7 @@ import { colors, radius, spacing } from "../../ui/theme";
 import { T } from "../../ui/T";
 import { Button } from "../../ui/Button";
 import { Screen } from "../../ui/Screen";
+import { EmptyState } from "../../ui/EmptyState";
 import { RoleChip } from "../../ui/RoleChip";
 import { Badge } from "../../ui/Badge";
 import { NumberField } from "../../ui/NumberField";
@@ -76,12 +77,9 @@ export default function Strategia() {
     if (status === "missing") {
       return (
         <Screen>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing(3) }}>
-            <T variant="title">Dataset non disponibile</T>
-            <T variant="dim" style={{ textAlign: "center" }}>
-              Importa o aggiorna il dataset dalla tab Lega per impostare la strategia.</T>
-            <Button title="Vai a Lega" onPress={() => router.navigate("/")} />
-          </View>
+          <EmptyState icon="cloud-offline-outline" title="Dataset non disponibile"
+            subtitle="Importa o aggiorna il dataset dalla tab Lega per impostare la strategia."
+            cta="Vai a Lega" onPress={() => router.navigate("/")} />
         </Screen>
       );
     }
@@ -97,12 +95,9 @@ export default function Strategia() {
   if (!league) {
     return (
       <Screen>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing(3) }}>
-          <T variant="title">Nessuna lega attiva</T>
-          <T variant="dim" style={{ textAlign: "center" }}>
-            Crea o seleziona una lega dalla tab Lega per impostare budget e target.</T>
-          <Button title="Vai a Lega" onPress={() => router.navigate("/")} />
-        </View>
+        <EmptyState icon="shield-outline" title="Nessuna lega attiva"
+          subtitle="Crea o seleziona una lega dalla tab Lega per impostare budget e target."
+          cta="Vai a Lega" onPress={() => router.navigate("/")} />
       </Screen>
     );
   }

@@ -68,7 +68,7 @@ export function DatasetBanner() {
           {dataset
             ? <T variant="dim">
                 Stagione {dataset.season} · {dataset.players.length} giocatori
-                {" "}· aggiornato {formattaData(dataset.generatedAt)}
+                {" "}· aggiornato al {formattaData(dataset.generatedAt)}
               </T>
             : <T variant="dim">Nessun dataset disponibile: aggiorna o importa un file.</T>}
         </View>

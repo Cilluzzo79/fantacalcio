@@ -11,8 +11,8 @@ import { coachOf } from "../../domain/coach";
 import type { Ruolo } from "../../domain/types";
 import { colors, radius, spacing } from "../../ui/theme";
 import { T } from "../../ui/T";
-import { Button } from "../../ui/Button";
 import { Screen } from "../../ui/Screen";
+import { EmptyState } from "../../ui/EmptyState";
 import { RoleChip } from "../../ui/RoleChip";
 import { Badge } from "../../ui/Badge";
 
@@ -53,12 +53,9 @@ export default function Riepilogo() {
     if (status === "missing") {
       return (
         <Screen>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing(3) }}>
-            <T variant="title">Dataset non disponibile</T>
-            <T variant="dim" style={{ textAlign: "center" }}>
-              Importa o aggiorna il dataset dalla tab Lega per vedere il riepilogo.</T>
-            <Button title="Vai a Lega" onPress={() => router.navigate("/")} />
-          </View>
+          <EmptyState icon="cloud-offline-outline" title="Dataset non disponibile"
+            subtitle="Importa o aggiorna il dataset dalla tab Lega per vedere il riepilogo."
+            cta="Vai a Lega" onPress={() => router.navigate("/")} />
         </Screen>
       );
     }
@@ -74,12 +71,9 @@ export default function Riepilogo() {
   if (!league || !auction || !riepilogo) {
     return (
       <Screen>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing(3) }}>
-          <T variant="title">Nessuna lega attiva</T>
-          <T variant="dim" style={{ textAlign: "center" }}>
-            Crea o seleziona una lega dalla tab Lega per vedere il riepilogo.</T>
-          <Button title="Vai a Lega" onPress={() => router.navigate("/")} />
-        </View>
+        <EmptyState icon="shield-outline" title="Nessuna lega attiva"
+          subtitle="Crea o seleziona una lega dalla tab Lega per vedere il riepilogo."
+          cta="Vai a Lega" onPress={() => router.navigate("/")} />
       </Screen>
     );
   }
@@ -91,12 +85,9 @@ export default function Riepilogo() {
   if (righeTotali === 0) {
     return (
       <Screen>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing(3) }}>
-          <T variant="title">Niente da riepilogare</T>
-          <T variant="dim" style={{ textAlign: "center" }}>
-            Registra qualche acquisto in Asta per vedere affari, strapagati e spesa per reparto.</T>
-          <Button title="Vai ad Asta" onPress={() => router.navigate("/asta")} />
-        </View>
+        <EmptyState icon="receipt-outline" title="Niente da riepilogare"
+          subtitle="Registra qualche acquisto in Asta per vedere affari, strapagati e spesa per reparto."
+          cta="Vai ad Asta" onPress={() => router.navigate("/asta")} />
       </Screen>
     );
   }

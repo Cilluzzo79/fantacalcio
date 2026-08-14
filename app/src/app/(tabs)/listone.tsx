@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Modal, Pressable, TextInput, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import { useDataset } from "../../store/dataset";
 import { useLeagues } from "../../store/leagues";
@@ -9,8 +10,8 @@ import { queryListone, type ListoneFilter } from "../../domain/listoneQuery";
 import type { Coach, Fascia, Ruolo } from "../../domain/types";
 import { colors, FASCIA_LABEL, fonts, radius, spacing } from "../../ui/theme";
 import { T } from "../../ui/T";
-import { Button } from "../../ui/Button";
 import { Screen } from "../../ui/Screen";
+import { EmptyState } from "../../ui/EmptyState";
 import { PlayerRow, PLAYER_ROW_HEIGHT } from "../../components/PlayerRow";
 
 const RUOLI: Ruolo[] = ["P", "D", "C", "A"];
@@ -73,12 +74,9 @@ export default function Listone() {
     if (status === "missing") {
       return (
         <Screen>
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: spacing(3) }}>
-            <T variant="title">Dataset non disponibile</T>
-            <T variant="dim" style={{ textAlign: "center" }}>
-              Importa o aggiorna il dataset dalla tab Lega per consultare il listone.</T>
-            <Button title="Vai a Lega" onPress={() => router.navigate("/")} />
-          </View>
+          <EmptyState icon="cloud-offline-outline" title="Dataset non disponibile"
+            subtitle="Importa o aggiorna il dataset dalla tab Lega per consultare il listone."
+            cta="Vai a Lega" onPress={() => router.navigate("/")} />
         </Screen>
       );
     }
@@ -148,10 +146,12 @@ export default function Listone() {
         getItemLayout={(_, index) =>
           ({ length: PLAYER_ROW_HEIGHT, offset: PLAYER_ROW_HEIGHT * index, index })}
         initialNumToRender={20}
-        renderItem={({ item }) => (
-          <PlayerRow player={item} prezzo={live ? prezzoFn(item.id) : null}
-            venduto={soldIds.has(item.id)}
-            onPress={() => router.push(`/player/${item.id}`)} />
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 30)}>
+            <PlayerRow player={item} prezzo={live ? prezzoFn(item.id) : null}
+              venduto={soldIds.has(item.id)}
+              onPress={() => router.push(`/player/${item.id}`)} />
+          </Animated.View>
         )}
         ListEmptyComponent={
           <T variant="dim" style={{ marginTop: spacing(6), textAlign: "center" }}>
