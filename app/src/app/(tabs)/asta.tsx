@@ -6,7 +6,7 @@ import { useLeagues } from "../../store/leagues";
 import { useAuctions } from "../../store/auctions";
 import { computeLive } from "../../domain/live";
 import { teamSummary } from "../../domain/auction";
-import { maxCoachOfferta } from "../../domain/coach";
+import { coachOf, maxCoachOfferta } from "../../domain/coach";
 import { normalizeSearch, queryListone } from "../../domain/listoneQuery";
 import type { Coach, Player } from "../../domain/types";
 import { colors, fonts, radius, spacing } from "../../ui/theme";
@@ -77,6 +77,14 @@ export default function Asta() {
 
   const purchasedCoachKeys = useMemo(() =>
     new Set((auction?.coaches ?? []).map(c => `${c.nome}|${c.squadra}`)), [auction]);
+
+  // squadre che hanno già un allenatore: nel BidSheet in modalità allenatore
+  // le relative chip vanno disabilitate, sullo stesso principio difensivo
+  // usato per i giocatori/allenatori già venduti (pre-filtrati ovunque).
+  const coachDisabledTeamIds = useMemo(() => {
+    if (!league || !auction) return new Set<string>();
+    return new Set(league.teams.filter(t => coachOf(auction, t.id) !== undefined).map(t => t.id));
+  }, [league, auction]);
 
   const coachRows = useMemo(() => {
     if (!dataset?.allenatori) return [];
@@ -230,6 +238,7 @@ export default function Asta() {
 
       <BidSheet visible={subject !== null} subject={subject}
         teams={activeLeague.teams} myTeamId={activeMyTeam.id}
+        disabledTeamIds={coachDisabledTeamIds}
         onRegister={handleRegister} onRegistered={handleRegistered}
         onClose={() => setSubject(null)} />
     </Screen>

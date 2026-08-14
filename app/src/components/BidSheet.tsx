@@ -14,6 +14,8 @@ export type BidSheetSubject =
   | { kind: "player"; player: Player; advice: BidAdvice }
   | { kind: "coach"; coach: Coach; maxOfferta: number };
 
+const EMPTY_SET: Set<string> = new Set();
+
 function subjectKeyOf(subject: BidSheetSubject | null): string | null {
   if (!subject) return null;
   return subject.kind === "player"
@@ -26,20 +28,39 @@ function defaultPrezzo(subject: BidSheetSubject): number {
   return Math.min(999, Math.max(1, Math.round(guida)));
 }
 
+/** In modalità allenatore evita di preselezionare una squadra che ne ha già
+ * uno (bloccata): altrimenti, se è proprio la MIA squadra ad essere già a
+ * posto, ASSEGNA fallirebbe subito con lo stesso AuctionError non bypassabile
+ * dal force, riproponendo il loop dell'Alert senza che l'utente abbia
+ * nemmeno toccato una chip disabilitata. */
+function defaultTeamId(subject: BidSheetSubject, teams: TeamConfig[], myTeamId: string,
+  disabledTeamIds: Set<string>): string {
+  if (subject.kind === "coach" && disabledTeamIds.has(myTeamId)) {
+    const alt = teams.find(t => !disabledTeamIds.has(t.id));
+    if (alt) return alt.id;
+  }
+  return myTeamId;
+}
+
 /** Bottom-sheet per la registrazione di un'assegnazione in asta (il cuore
  * dell'app): numeri guida (EQUO/MAX TUO/MIO TETTO per un giocatore, QTA/TETTO
  * per un allenatore), lista avversari (solo giocatori) e griglia squadre per
  * assegnare il prezzo. Il flusso di forzatura è qui: un AuctionError in
  * registrazione apre un Alert con l'opzione "Registra comunque" (force). */
-export function BidSheet({ visible, subject, teams, myTeamId, onRegister, onRegistered, onClose }: {
+export function BidSheet({ visible, subject, teams, myTeamId, disabledTeamIds, onRegister,
+  onRegistered, onClose }: {
   visible: boolean;
   subject: BidSheetSubject | null;
   teams: TeamConfig[];
   myTeamId: string;
+  /** Squadre non selezionabili in modalità allenatore perché ne hanno già
+   * uno (coachOf truthy); ignorato in modalità giocatore. */
+  disabledTeamIds?: Set<string>;
   onRegister(teamId: string, prezzo: number, opts?: { force?: boolean }): void;
   onRegistered(): void;
   onClose(): void;
 }) {
+  const disabled = disabledTeamIds ?? EMPTY_SET;
   const [teamId, setTeamId] = useState(myTeamId);
   const [prezzo, setPrezzo] = useState(1);
   const key = subjectKeyOf(subject);
@@ -50,8 +71,9 @@ export function BidSheet({ visible, subject, teams, myTeamId, onRegister, onRegi
     // altrimenti un ricalcolo dovuto a un acquisto altrove svuoterebbe
     // il prezzo che l'utente sta digitando.
     if (!subject) return;
-    setTeamId(myTeamId);
+    setTeamId(defaultTeamId(subject, teams, myTeamId, disabled));
     setPrezzo(defaultPrezzo(subject));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, myTeamId]);
 
   function attemptRegister(force?: boolean) {
@@ -92,10 +114,16 @@ export function BidSheet({ visible, subject, teams, myTeamId, onRegister, onRegi
                 Assegna a</T>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: spacing(2),
                 marginBottom: spacing(3) }}>
-                {teams.map(t => (
-                  <TeamChip key={t.id} team={t} selected={teamId === t.id} isMine={t.id === myTeamId}
-                    onPress={() => setTeamId(t.id)} />
-                ))}
+                {teams.map(t => {
+                  // il blocco squadra-con-allenatore esiste solo in modalità
+                  // allenatore: in modalità giocatore tutte le squadre restano
+                  // selezionabili (comportamento invariato).
+                  const isDisabled = subject.kind === "coach" && disabled.has(t.id);
+                  return (
+                    <TeamChip key={t.id} team={t} selected={teamId === t.id} isMine={t.id === myTeamId}
+                      disabled={isDisabled} onPress={() => setTeamId(t.id)} />
+                  );
+                })}
               </View>
 
               <NumberField label="Prezzo" value={prezzo} onChange={setPrezzo} min={1} max={999} />
@@ -184,14 +212,15 @@ function Avversari({ advice }: { advice: BidAdvice }) {
   );
 }
 
-function TeamChip({ team, selected, isMine, onPress }: {
-  team: TeamConfig; selected: boolean; isMine: boolean; onPress(): void;
+function TeamChip({ team, selected, isMine, disabled, onPress }: {
+  team: TeamConfig; selected: boolean; isMine: boolean; disabled?: boolean; onPress(): void;
 }) {
   return (
-    <Pressable onPress={onPress}
+    <Pressable onPress={onPress} disabled={disabled}
       style={{ borderWidth: 1, borderColor: isMine ? colors.accent : colors.line,
         backgroundColor: selected ? colors.accent : (isMine ? colors.surfaceAlt : "transparent"),
-        borderRadius: radius.md, paddingHorizontal: spacing(2.5), paddingVertical: spacing(1.5) }}>
+        borderRadius: radius.md, paddingHorizontal: spacing(2.5), paddingVertical: spacing(1.5),
+        opacity: disabled ? 0.4 : 1 }}>
       <T variant="label"
         style={{ color: selected ? colors.accentText : isMine ? colors.accent : colors.textDim }}>
         {team.nome}{isMine ? " · TU" : ""}
