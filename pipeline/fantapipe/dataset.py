@@ -14,7 +14,8 @@ REQUIRED_KEYS = ("id", "sofaId", "nome", "ruolo", "squadra", "qta", "fvm",
 
 
 def build_dataset(matched_df: pd.DataFrame, careers: dict, season_label: str,
-                  quotazioni_file: str, now_iso: str) -> dict:
+                  quotazioni_file: str, now_iso: str,
+                  coaches: list[dict] | None = None) -> dict:
     rows = []
     for r in matched_df.itertuples():
         sofa_id = None if pd.isna(r.sofa_id) else int(r.sofa_id)
@@ -43,8 +44,14 @@ def build_dataset(matched_df: pd.DataFrame, careers: dict, season_label: str,
                        "value_score": [p["valueScore"] for p in rows]})
     for player, fascia in zip(rows, assign_fasce(df)):
         player["fascia"] = fascia
-    return {"schemaVersion": 1, "generatedAt": now_iso, "season": season_label,
-            "quotazioniFile": quotazioni_file, "players": rows}
+    ds = {"schemaVersion": 1, "generatedAt": now_iso, "season": season_label,
+          "quotazioniFile": quotazioni_file, "players": rows}
+    # Chiave opzionale additiva (schemaVersion resta 1): presente solo con
+    # listoni che includono gli allenatori (Gazzetta). L'app la ignora se
+    # la lega non li usa.
+    if coaches:
+        ds["allenatori"] = coaches
+    return ds
 
 
 def validate_dataset(ds: dict) -> list[str]:
@@ -75,6 +82,18 @@ def validate_dataset(ds: dict) -> list[str]:
     for ruolo in config.RUOLI:
         if players and ruolo not in ruoli_presenti:
             problems.append(f"nessun giocatore con ruolo {ruolo}")
+    if "allenatori" in ds:
+        seen = set()
+        for c in ds["allenatori"] or [{}]:
+            if not (isinstance(c.get("nome"), str) and c["nome"]
+                    and isinstance(c.get("squadra"), str) and c["squadra"]
+                    and isinstance(c.get("qta"), int) and c["qta"] >= 1):
+                problems.append(f"allenatore malformato: {c}")
+                continue
+            key = (c["nome"], c["squadra"])
+            if key in seen:
+                problems.append(f"allenatore duplicato: {key}")
+            seen.add(key)
     return problems
 
 

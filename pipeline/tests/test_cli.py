@@ -78,6 +78,45 @@ class CareerFailingClient(FakeClient):
         raise RuntimeError("sofascore down")
 
 
+def test_run_pipeline_pdf_dispatch_include_allenatori(tmp_path, monkeypatch):
+    import pandas as pd
+    df = pd.DataFrame({
+        "id": [1, 2, 3, 4],
+        "nome": ["Barella", "Meret", "Bastoni", "Kean"],
+        "ruolo": ["C", "P", "D", "A"],
+        "squadra": ["Inter", "Inter", "Inter", "Inter"],
+        "qta": [28, 12, 20, 22], "fvm": [28, 12, 20, 22]})
+    coaches = [{"nome": "CHIVU", "squadra": "Inter", "qta": 30}]
+    # il routing per estensione è il comportamento sotto test: il loader
+    # Gazzetta vero è coperto da test_listone_gazzetta sul PDF reale
+    monkeypatch.setattr(fantapipe.cli, "load_listone_gazzetta",
+                        lambda p: (df, coaches))
+    listone = tmp_path / "listone_gazzetta_2026-08-14.pdf"
+    listone.write_bytes(b"%PDF finto")
+    out = tmp_path / "dataset.json"
+    ds = run_pipeline(listone, client=FakeClient(), cache_dir=tmp_path / "cache",
+                      out_path=out, now_iso="2026-08-12T07:00:00+00:00",
+                      data_dir=tmp_path / "pipedata")
+    assert ds["allenatori"] == coaches
+    loaded = json.loads(out.read_text(encoding="utf-8"))
+    assert loaded["allenatori"] == coaches
+    assert len(loaded["players"]) == 4
+
+
+def test_main_prova_gazzetta_poi_fantacalcio_poi_locale(tmp_path, monkeypatch):
+    import fantapipe.listone_download as dl
+    calls = []
+    monkeypatch.setattr(dl, "download_gazzetta",
+                        lambda d: calls.append("gazzetta") or None)
+    monkeypatch.setattr(dl, "download_listone",
+                        lambda d: calls.append("fantacalcio") or None)
+    monkeypatch.setattr(dl, "latest_listone",
+                        lambda d: calls.append("locale") or None)
+    with pytest.raises(SystemExit):
+        fantapipe.cli.main(["--skip-publish"])
+    assert calls == ["gazzetta", "fantacalcio", "locale"]
+
+
 def test_run_pipeline_skips_publish_when_coverage_degraded(tmp_path, monkeypatch):
     listone = tmp_path / "quot.xlsx"
     _make_listone(listone)

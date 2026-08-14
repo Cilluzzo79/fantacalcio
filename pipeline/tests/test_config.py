@@ -23,6 +23,14 @@ def test_rating_to_voto():
     assert config.rating_to_voto(7.4) > config.rating_to_voto(6.9)
 
 
+def test_team_aliases_coprono_le_squadre_gazzetta():
+    # ogni squadra del listone Gazzetta deve avere un alias SofaScore,
+    # altrimenti tutti i suoi giocatori finiscono match_status="nessuno"
+    from fantapipe.listone_gazzetta import KNOWN_TEAMS
+    mancanti = set(KNOWN_TEAMS) - set(config.TEAM_ALIASES)
+    assert not mancanti, f"squadre senza alias: {sorted(mancanti)}"
+
+
 def test_recency_weights():
     assert abs(sum(config.RECENCY_WEIGHTS) - 1.0) < 1e-9
     assert config.RECENCY_WEIGHTS[0] > config.RECENCY_WEIGHTS[-1]

@@ -4,18 +4,22 @@ Pipeline for processing Fantacalcio (Italian fantasy football) data from SofaSco
 
 ## Architecture
 
-The pipeline orchestrates data ingestion and transformation in four stages: (1) **Download/ingest** Listone (club roster) from Fantacalcio.it export or filesystem; (2) **Fuzzy-match** players across Listone and SofaScore squads to build a unified roster; (3) **Fetch & normalize** player performance data from SofaScore and multi-season foreign league stats; (4) **Compile & publish** an enriched dataset (players + seasonal coefficients + traits) to GitHub as raw JSON. A `matching_report.csv` flags ambiguous matches for manual review and override.
+The pipeline orchestrates data ingestion and transformation in four stages: (1) **Download/ingest** Listone — primary source: PDF Gazzetta "fantacampionato" (public, no credentials); legacy: Fantacalcio.it xlsx export or filesystem; (2) **Fuzzy-match** players across Listone and SofaScore squads to build a unified roster; (3) **Fetch & normalize** player performance data from SofaScore and multi-season foreign league stats; (4) **Compile & publish** an enriched dataset (players + seasonal coefficients + traits + optional coaches) to GitHub as raw JSON. A `matching_report.csv` flags ambiguous matches for manual review and override.
+
+### Listone Gazzetta (PDF)
+
+`fantapipe/listone_gazzetta.py` parses the two-column PDF (sections Portieri/Difensori/Centrocampisti/Attaccanti/Allenatori). Since the PDF has no numeric ids and no FVM: ids are **synthesized** as a stable hash of (ruolo, nome, squadra) — they stay identical across weekly runs until a player changes team — and `qta`=`fvm`=cost in fantamilioni. Identical twin entries (the Oyono twins at Frosinone) get disambiguated as `"OYONO"`/`"OYONO (2)"` in PDF order. Coaches land in the dataset under the **optional top-level key `allenatori`** (`[{nome, squadra, qta}]`, additive — `schemaVersion` stays 1); leagues that don't use coaches simply ignore it in the app.
 
 ## Running the Pipeline
 
-Manual run (auto-downloads Listone from Fantacalcio.it — **best-effort**: `LOGIN_URL`/`EXPORT_URL` in `fantapipe/listone_download.py` are unverified best-guess values pending a one-time DevTools check, see checklist below — falls back to latest file if credentials missing or the download fails):
+Manual run — auto-download order: (1) PDF Gazzetta from `GAZZETTA_URL` (public, no credentials; the `?v=` query param is a cache-buster — update it in `fantapipe/listone_download.py` if Gazzetta publishes a new listone); (2) Fantacalcio.it xlsx (legacy, needs `.env` credentials; `LOGIN_URL` is an unverified best-guess); (3) most recent file already in `pipeline/data/listone/`:
 ```powershell
 .venv\Scripts\python -m fantapipe.cli
 ```
 
-Or with explicit Listone file:
+Or with explicit Listone file (`.pdf` = Gazzetta parser, anything else = xlsx loader):
 ```powershell
-.venv\Scripts\python -m fantapipe.cli --listone <path.xlsx>
+.venv\Scripts\python -m fantapipe.cli --listone <path.pdf|path.xlsx>
 ```
 
 Skip publishing to GitHub:
@@ -23,7 +27,7 @@ Skip publishing to GitHub:
 .venv\Scripts\python -m fantapipe.cli --skip-publish
 ```
 
-Run tests (95 tests):
+Run tests (117 tests):
 ```powershell
 .venv\Scripts\python -m pytest tests -v
 ```
@@ -67,7 +71,7 @@ Create a `.env` file in `pipeline/` (copy from `.env.example`) with:
 - `FC_EMAIL`: Email for Fantacalcio.it account
 - `FC_PASSWORD`: Password for Fantacalcio.it account
 
-These credentials are used for automated Listone downloads. If not present, the pipeline attempts to use the most recent manually downloaded Listone file in `pipeline/data/listone/`.
+These credentials are **optional** since the Gazzetta PDF became the primary source: they only serve the legacy Fantacalcio.it xlsx download. If not present, the pipeline falls back to the most recent Listone file in `pipeline/data/listone/`.
 
 **Security note:** The `.env` file is gitignored and never committed. Credentials must be rotated manually by updating the file on the deployment machine.
 
@@ -93,7 +97,7 @@ If the machine is powered off on Monday morning and misses the scheduled start, 
 
 Prima di affidarsi a una run reale (specialmente la prima, o dopo che il sito Fantacalcio.it cambia):
 
-1. **Verifica LOGIN_URL/EXPORT_URL** in `fantapipe/listone_download.py` via DevTools del browser (Network tab durante login + export manuale sul sito) — sono valori best-guess mai verificati live. In alternativa, scarica il listone a mano e salvalo in `pipeline/data/listone/`.
+1. **Verifica che `GAZZETTA_URL`** in `fantapipe/listone_download.py` punti ancora al listone corrente (il `?v=` è un cache-buster che Gazzetta aggiorna a ogni ripubblicazione). In alternativa, scarica il PDF a mano e salvalo in `pipeline/data/listone/` come `listone_gazzetta_<data>.pdf`.
 2. **Prima run con `--skip-publish`** per controllare l'output senza pubblicare un dataset potenzialmente sbagliato.
 3. **Rivedi `matching_report.csv`** (righe `dubbio` e `duplicato`) e confronta le squadre del listone con `TEAM_ALIASES` in `fantapipe/config.py` — squadre non mappate finiscono con `match_status="nessuno"` per tutti i loro giocatori.
 4. **Verifica le statistiche di un PORTIERE reale** nel dataset generato: controlla che `gol subiti` (season `golSubiti`) sia presente e non `null` per le sue stagioni più recenti.

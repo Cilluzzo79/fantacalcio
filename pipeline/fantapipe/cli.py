@@ -6,8 +6,16 @@ from fantapipe import config, sofa_client
 from fantapipe.career import fetch_career
 from fantapipe.dataset import build_dataset, validate_dataset, write_dataset
 from fantapipe.listone import load_listone
+from fantapipe.listone_gazzetta import load_listone_gazzetta
 from fantapipe.matching import (build_sofa_index, load_overrides,
                                 match_players, write_report)
+
+
+def _load_any(path: Path):
+    """Dispatch per estensione: .pdf = Gazzetta (con allenatori), altro = xlsx."""
+    if path.suffix.lower() == ".pdf":
+        return load_listone_gazzetta(path)
+    return load_listone(path), []
 
 
 def _season_label(now: datetime.date) -> str:
@@ -24,8 +32,10 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
     now_iso = now.isoformat(timespec="seconds")
     log = []
 
-    df = load_listone(listone_path)
-    log.append(f"listone: {len(df)} giocatori da {listone_path.name}")
+    df, coaches = _load_any(listone_path)
+    log.append(f"listone: {len(df)} giocatori"
+               + (f" + {len(coaches)} allenatori" if coaches else "")
+               + f" da {listone_path.name}")
 
     index, warns = build_sofa_index(sorted(df.squadra.unique()), client=client)
     log.extend(warns)
@@ -60,7 +70,7 @@ def run_pipeline(listone_path: Path, client=sofa_client, cache_dir=None,
                    f"carriere {season_rate:.0%})")
 
     ds = build_dataset(matched, careers, _season_label(now.date()),
-                       listone_path.name, now_iso)
+                       listone_path.name, now_iso, coaches=coaches)
     problems = validate_dataset(ds)
     if problems:
         log.append("dataset non valido:\n" + "\n".join(problems))
@@ -90,9 +100,11 @@ def main(argv=None):
 
     listone = args.listone
     if listone is None:
-        from fantapipe.listone_download import download_listone, latest_listone
+        from fantapipe import listone_download as dl
         listone_dir = config.PIPE_DATA / "listone"
-        listone = download_listone(listone_dir) or latest_listone(listone_dir)
+        listone = (dl.download_gazzetta(listone_dir)
+                   or dl.download_listone(listone_dir)
+                   or dl.latest_listone(listone_dir))
         if listone is None:
             sys.exit("Nessun listone: download fallito e nessun file in "
                      f"{listone_dir}. Scarica l'export a mano e riprova con --listone.")

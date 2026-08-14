@@ -78,6 +78,43 @@ def test_validate_trova_problemi():
     assert len(problems) >= 2
 
 
+def _coaches():
+    return [{"nome": "CHIVU", "squadra": "Inter", "qta": 30},
+            {"nome": "ALLEGRI", "squadra": "Napoli", "qta": 26}]
+
+
+def _build_with_coaches():
+    careers = {100: _career(), 101: _career(), 102: _career()}
+    return dataset.build_dataset(_matched_df(), careers, "2026-27",
+                                 "listone.pdf", "2026-08-12T07:00:00+00:00",
+                                 coaches=_coaches())
+
+
+def test_allenatori_assenti_di_default():
+    # listone xlsx senza allenatori: la chiave non deve proprio comparire
+    assert "allenatori" not in _build()
+
+
+def test_allenatori_inclusi_e_validi():
+    ds = _build_with_coaches()
+    assert ds["allenatori"] == _coaches()
+    assert dataset.validate_dataset(ds) == []
+
+
+def test_validate_allenatori_malformati():
+    ds = _build_with_coaches()
+    del ds["allenatori"][0]["qta"]
+    problems = dataset.validate_dataset(ds)
+    assert any("allenator" in p for p in problems)
+
+
+def test_validate_allenatori_duplicati():
+    ds = _build_with_coaches()
+    ds["allenatori"].append({"nome": "CHIVU", "squadra": "Inter", "qta": 31})
+    problems = dataset.validate_dataset(ds)
+    assert any("duplicat" in p for p in problems)
+
+
 def test_write_utf8(tmp_path):
     out = tmp_path / "dataset.json"
     dataset.write_dataset(_build(), out)

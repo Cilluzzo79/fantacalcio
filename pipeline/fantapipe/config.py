@@ -52,4 +52,5 @@ TEAM_ALIASES = {
     "Lecce": "Lecce", "Parma": "Parma", "Empoli": "Empoli",
     "Venezia": "Venezia", "Monza": "Monza", "Pisa": "Pisa",
     "Cremonese": "Cremonese", "Sassuolo": "Sassuolo",
+    "Frosinone": "Frosinone",
 }

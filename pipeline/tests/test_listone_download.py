@@ -44,3 +44,28 @@ def test_latest_listone(tmp_path):
     (tmp_path / "quotazioni_2026-08-10.xlsx").write_bytes(b"PK")
     assert dl.latest_listone(tmp_path).name == "quotazioni_2026-08-10.xlsx"
     assert dl.latest_listone(tmp_path / "vuota") is None
+
+
+def test_download_gazzetta_ok(tmp_path):
+    s = FakeSession(export_bytes=b"%PDF-1.7 finto")
+    out = dl.download_gazzetta(tmp_path, session=s)
+    assert out is not None and out.suffix == ".pdf"
+    assert out.name.startswith("listone_gazzetta_")
+    assert out.read_bytes().startswith(b"%PDF")
+
+
+def test_download_gazzetta_rifiuta_non_pdf(tmp_path):
+    s = FakeSession(export_bytes=b"<html>errore cdn</html>")
+    assert dl.download_gazzetta(tmp_path, session=s) is None
+    assert not list(tmp_path.glob("*.pdf"))
+
+
+def test_latest_listone_sceglie_il_piu_recente_tra_xlsx_e_pdf(tmp_path):
+    import os
+    xlsx = tmp_path / "quotazioni_2026-08-01.xlsx"
+    xlsx.write_bytes(b"PK")
+    pdf = tmp_path / "listone_gazzetta_2026-08-14.pdf"
+    pdf.write_bytes(b"%PDF")
+    os.utime(xlsx, (1000000000, 1000000000))
+    os.utime(pdf, (1000000100, 1000000100))
+    assert dl.latest_listone(tmp_path).name == pdf.name
