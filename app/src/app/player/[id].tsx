@@ -161,30 +161,34 @@ function SeasonsTable({ seasons, cols }: {
   return (
     <View style={{ borderWidth: 1, borderColor: colors.line, borderRadius: radius.md,
       overflow: "hidden" }}>
-      <View style={{ flexDirection: "row", backgroundColor: colors.surfaceAlt,
-        paddingVertical: spacing(1.5) }}>
-        <T variant="label" style={{ width: seasonW, paddingLeft: spacing(2) }}>Stagione</T>
-        <T variant="label" style={{ width: torneoW }}>Torneo</T>
-        {cols.map(c => (
-          <T key={c.key} variant="label" style={{ width: statW, textAlign: "right" }}>
-            {c.label}</T>
-        ))}
-      </View>
-      {seasons.map((row, i) => (
-        <View key={i} style={{ flexDirection: "row", alignItems: "center",
-          paddingVertical: spacing(1.5), borderTopWidth: 1, borderTopColor: colors.line }}>
-          <View style={{ width: seasonW, paddingLeft: spacing(2) }}>
-            <T variant="body" style={{ fontSize: 13 }}>{row.season}</T>
-            {row.coeff !== 1 && <T variant="dim" style={{ fontSize: 10 }}>×{row.coeff}</T>}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View>
+          <View style={{ flexDirection: "row", backgroundColor: colors.surfaceAlt,
+            paddingVertical: spacing(1.5) }}>
+            <T variant="label" style={{ width: seasonW, paddingLeft: spacing(2) }}>Stagione</T>
+            <T variant="label" style={{ width: torneoW }}>Torneo</T>
+            {cols.map(c => (
+              <T key={c.key} variant="label" style={{ width: statW, textAlign: "right" }}>
+                {c.label}</T>
+            ))}
           </View>
-          <T variant="dim" style={{ width: torneoW, fontSize: 12 }} numberOfLines={1}>
-            {row.torneo}</T>
-          {cols.map(c => (
-            <T key={c.key} variant="body" style={{ width: statW, fontSize: 13, textAlign: "right" }}>
-              {fmtCell(row, c.key)}</T>
+          {seasons.map((row, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center",
+              paddingVertical: spacing(1.5), borderTopWidth: 1, borderTopColor: colors.line }}>
+              <View style={{ width: seasonW, paddingLeft: spacing(2) }}>
+                <T variant="body" style={{ fontSize: 13 }}>{row.season}</T>
+                {row.coeff !== 1 && <T variant="dim" style={{ fontSize: 10 }}>×{row.coeff}</T>}
+              </View>
+              <T variant="dim" style={{ width: torneoW, fontSize: 12 }} numberOfLines={1}>
+                {row.torneo}</T>
+              {cols.map(c => (
+                <T key={c.key} variant="body" style={{ width: statW, fontSize: 13, textAlign: "right" }}>
+                  {fmtCell(row, c.key)}</T>
+              ))}
+            </View>
           ))}
         </View>
-      ))}
+      </ScrollView>
     </View>
   );
 }
