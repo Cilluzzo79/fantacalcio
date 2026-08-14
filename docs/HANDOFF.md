@@ -45,7 +45,11 @@ Il **raw URL è vivo** (HTTP 200): dataset da listone Gazzetta con 577 giocatori
 ### B. Fix scheduler ✅ (2026-08-14)
 `pipeline/run_weekly.ps1`: il merge stdout/stderr ora lo fa `cmd /c` (PowerShell 5.1 con EAP=Stop trasformava stderr benigno in falso "ERRORE" — riprodotto empiricamente prima e dopo il fix, inclusa la propagazione dei veri exit code ≠ 0).
 
-### C. Piano 2b — UI completa (da scrivere con writing-plans)
+### C. Piano 2b — UI completa ✅ ESEGUITO (2026-08-14, commits 92a07b5..d7233e5)
+Piano `docs/superpowers/plans/2026-08-14-app-ui-broadcast.md` eseguito con subagent-driven-development: 13 task, review per-task + final review whole-branch pulite, **76 test jest verdi**, typecheck pulito, `expo export` ok. Estetica "Broadcast TV" (navy #0B1220 + giallo #FFD400, Barlow Condensed + Archivo bundlati), 5 tab + dettaglio giocatore, allenatori opzionali per lega end-to-end, tutte le 6 note vincolanti onorate e verificate dalla final review.
+**PENDENTI (passi utente)**: `npx eas-cli login` da `app\` → `npx eas-cli build --platform android --profile preview` → smoke sul dispositivo (checklist nel Task 13 del piano: lega 8 squadre, listone, dettaglio, strategia, 3 acquisti di cui 1 force, undo, correzione, riepilogo, lega con allenatori, tutto offline).
+
+### C-bis. (storico) Piano 2b — note originali
 5 schermate col design curato (skill frontend-design, tema scuro sportivo): Lega (+riparazione), Listone, Strategia (piano budget + target), Asta live (il cuore: bidAdvice, registrazione 2-3 tap, rose avversarie, undo), Riepilogo. Poi APK (EAS build o gradle).
 **Note vincolanti dal triage della final review 2a**: la schermata riparazione deve validare l'over-allocazione del rosterIniziale; il refresh dataset deve esporre un "reason" per l'error surface; riscrivere gli input della Home (bug `parseInt("0")||8`, floor crediti dimensionalmente errato); il Listone 2b deve usare `computeLive` (i prezzi base sono sbagliati in riparazione); sanity: Σ prezzi ≈ monte solo sui giocatori vorp>0.
 **Nota vincolante 2026-08-14 (richiesta utente)**: gli **allenatori sono opzionali per lega** — il dataset ora può contenere la chiave top-level `allenatori` (`[{nome, squadra, qta}]`); la lega deve avere un toggle "usa allenatori" (default off) e solo se attivo l'app mostra/gestisce lo slot allenatore (asta, budget, rosa). `parseDataset` dell'app ignora già le chiavi extra: nessuna migrazione necessaria.
