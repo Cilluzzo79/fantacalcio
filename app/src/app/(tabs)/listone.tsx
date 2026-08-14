@@ -25,11 +25,12 @@ export default function Listone() {
   const status = useDataset(s => s.status);
   const leagues = useLeagues(s => s.leagues);
   const activeLeagueId = useLeagues(s => s.activeLeagueId);
-  const getAuction = useAuctions(s => s.getAuction);
   const router = useRouter();
 
   const league = leagues.find(l => l.id === activeLeagueId) ?? null;
-  const auction = league ? getAuction(league.id) : null;
+  // sottoscrizione reattiva (vedi commento in asta.tsx): selettore inline,
+  // non un riferimento imperativo a getAuction.
+  const auction = useAuctions(s => (league ? s.getAuction(league.id) : null));
 
   const [text, setText] = useState("");
   const [ruolo, setRuolo] = useState<Ruolo | null>(null);

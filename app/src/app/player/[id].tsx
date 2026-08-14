@@ -34,10 +34,11 @@ export default function PlayerDetail() {
   const dataset = useDataset(s => s.dataset);
   const leagues = useLeagues(s => s.leagues);
   const activeLeagueId = useLeagues(s => s.activeLeagueId);
-  const getAuction = useAuctions(s => s.getAuction);
 
   const league = leagues.find(l => l.id === activeLeagueId) ?? null;
-  const auction = league ? getAuction(league.id) : null;
+  // sottoscrizione reattiva (vedi commento in asta.tsx): selettore inline,
+  // non un riferimento imperativo a getAuction.
+  const auction = useAuctions(s => (league ? s.getAuction(league.id) : null));
 
   const player = useMemo(() =>
     dataset?.players.find(p => p.id === playerId) ?? null, [dataset, playerId]);

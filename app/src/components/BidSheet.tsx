@@ -67,6 +67,15 @@ export function BidSheet({ visible, subject, teams, myTeamId, disabledTeamIds, o
   const [prezzo, setPrezzo] = useState(1);
   const key = subjectKeyOf(subject);
 
+  // vicolo cieco modalità allenatore: se TUTTE le squadre della lega hanno
+  // già un allenatore, defaultTeamId ripiega su myTeamId (l'unica opzione
+  // rimasta) ma quella squadra è comunque bloccata, quindi ASSEGNA
+  // lancerebbe sempre lo stesso AuctionError non forzabile in loop. Si
+  // disabilita direttamente il bottone con una spiegazione, invece di far
+  // scoprire il vicolo cieco all'utente a suon di Alert.
+  const coachDeadEnd = subject?.kind === "coach"
+    && teams.length > 0 && teams.every(t => disabled.has(t.id));
+
   useEffect(() => {
     // reset solo quando cambia davvero il soggetto (nuovo giocatore/allenatore
     // selezionato), non ad ogni ricalcolo di advice a parità di selezione:
@@ -129,7 +138,12 @@ export function BidSheet({ visible, subject, teams, myTeamId, disabledTeamIds, o
               </View>
 
               <NumberField label="Prezzo" value={prezzo} onChange={setPrezzo} min={1} max={999} />
-              <Button title="Assegna" size="lg" onPress={() => attemptRegister()} />
+              {coachDeadEnd && (
+                <T variant="dim" style={{ textAlign: "center", marginBottom: spacing(2) }}>
+                  Tutte le squadre hanno già un allenatore.</T>
+              )}
+              <Button title="Assegna" size="lg" disabled={coachDeadEnd}
+                onPress={() => attemptRegister()} />
             </ScrollView>
           )}
         </Pressable>

@@ -32,13 +32,17 @@ export default function Asta() {
   const status = useDataset(s => s.status);
   const leagues = useLeagues(s => s.leagues);
   const activeLeagueId = useLeagues(s => s.activeLeagueId);
-  const getAuction = useAuctions(s => s.getAuction);
   const purchase = useAuctions(s => s.purchase);
   const purchaseCoach = useAuctions(s => s.purchaseCoach);
   const router = useRouter();
 
   const league = leagues.find(l => l.id === activeLeagueId) ?? null;
-  const auction = league ? getAuction(league.id) : null;
+  // sottoscrizione reattiva: selettore inline invocato ad ogni render dello
+  // store, non un riferimento imperativo a getAuction (che non fa
+  // ri-renderizzare i consumer quando byLeague cambia altrove, es. undo/remove
+  // dal REGISTRO). L'identità cache per leghe assenti in store/auctions.ts
+  // garantisce che questo selettore non causi loop.
+  const auction = useAuctions(s => (league ? s.getAuction(league.id) : null));
 
   const [panel, setPanel] = useState<Panel>("asta");
   const [mode, setMode] = useState<Mode>("players");

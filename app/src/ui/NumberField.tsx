@@ -13,8 +13,19 @@ export function NumberField({ label, value, onChange, min, max, step = 1 }: {
     onChange(parseIntero(text, { min, max, fallback: value }));
     setRaw(null);
   };
-  const bump = (d: number) =>
+  // ogni tasto premuto committa subito il valore parsato (clampato):
+  // digitare un prezzo e toccare subito ASSEGNA/Salva senza far scattare
+  // onEndEditing non deve più registrare il valore precedente. Il testo
+  // mostrato (`raw`) resta quello digitato, non quello clampato: si corregge
+  // da solo al tasto successivo (v. commento CAREFUL nel piano).
+  const onChangeText = (text: string) => {
+    setRaw(text);
+    onChange(parseIntero(text, { min, max, fallback: value }));
+  };
+  const bump = (d: number) => {
+    setRaw(null); // scarta un raw pendente: non deve mascherare il nuovo value
     onChange(Math.min(max, Math.max(min, value + d * step)));
+  };
   return (
     <View style={{ marginBottom: spacing(3) }}>
       <T variant="label" style={{ marginBottom: spacing(1) }}>{label}</T>
@@ -22,7 +33,7 @@ export function NumberField({ label, value, onChange, min, max, step = 1 }: {
         <Stepper sign="−" onPress={() => bump(-1)} />
         <TextInput
           value={raw ?? String(value)}
-          onChangeText={setRaw}
+          onChangeText={onChangeText}
           onEndEditing={e => commit(e.nativeEvent.text)}
           keyboardType="number-pad"
           style={{ flex: 1, textAlign: "center", color: colors.text,
