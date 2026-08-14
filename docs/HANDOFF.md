@@ -1,6 +1,6 @@
 # HANDOFF — Fantacalcio Asta
 
-> Ultimo aggiornamento: 2026-08-13 · HEAD: `667707d` su `master` (pushato) · Repo pubblico: https://github.com/Cilluzzo79/fantacalcio
+> Ultimo aggiornamento: 2026-08-14 · Repo pubblico: https://github.com/Cilluzzo79/fantacalcio
 
 ## 1. Cos'è il progetto
 
@@ -14,7 +14,7 @@ Assistente per le aste del fantacalcio Serie A (modalità **Classic**), uso pers
 ## 2. Stato: cosa è FATTO
 
 ### Piano 1 — Pipeline dati ✅ (completo, `docs/superpowers/plans/2026-08-12-pipeline-dati.md`)
-- Package `fantapipe` in `pipeline/` (venv: `pipeline\.venv`), **95 test pytest verdi**.
+- Package `fantapipe` in `pipeline/` (venv: `pipeline\.venv`), **117 test pytest verdi**.
 - Flusso: listone Excel → matching fuzzy con rose SofaScore (ambiguità→"dubbio", duplicati sofaId→demote, report + overrides) → carriere multi-campionato con selezione league-first per anno (coppe/nazionali/giovanili escluse) e cache per giocatore → traits (rigorista, para-rigori...) → proiezioni (recency 0.5/0.3/0.2, coefficienti di lega) → fasce+affidabilità (−15 se match "dubbio") → `dataset.json` validato → publish su GitHub (gated: salta se match<70% o carriere<60%; commit con pathspec) → scheduler.
 - **Contratto `dataset.json`**: nell'header del piano. Il dataset NON contiene prezzi in crediti (solo `valueScore`; i prezzi li calcola l'app per lega).
 - Scheduler Windows: task "FantacalcioPipeline", lunedì 09:00, `pipeline/run_weekly.ps1` (passa `--max-age-days 6`), log in `pipeline\data\scheduler_log.txt` + `last_run_output.txt`.
@@ -37,19 +37,23 @@ Assistente per le aste del fantacalcio Serie A (modalità **Classic**), uso pers
 
 ## 3. Cosa MANCA (in ordine)
 
-### A. Prima run reale della pipeline — ⏳ attende input utente
-Il raw URL `https://raw.githubusercontent.com/Cilluzzo79/fantacalcio/master/data/dataset.json` è **404** finché non gira la prima run. Serve UNO dei due:
-- credenziali Fantacalcio.it in `pipeline\.env` (file già creato con `FC_EMAIL=`/`FC_PASSWORD=` vuoti), **oppure**
-- export Excel quotazioni scaricato a mano in `pipeline\data\listone\`.
+### A. Prima run reale della pipeline — ⏳ bloccata da 403 SofaScore (2026-08-14)
+**Il listone c'è**: PDF Gazzetta "fantacampionato" (fornito dall'utente il 2026-08-14), scaricato in `pipeline\data\listone\listone_gazzetta_2026-08-14.pdf` e integrato in pipeline (v. sezione 2, "Listone Gazzetta"). Le credenziali Fantacalcio.it NON servono più.
 
-Poi seguire la **"Checklist prima run reale" in `pipeline/README.md`**: run con `--skip-publish` (prima run ~30-60 min per ~600 carriere, poi cache), revisione `matching_report.csv` (dubbi/duplicati → `matching_overrides.csv`), confronto squadre listone vs `TEAM_ALIASES` in `config.py` (neopromosse 2026-27!), verifica statistiche di un PORTIERE reale (gol subiti presenti), poi run con publish e check del raw URL. Nota: `EXPORT_URL` stagione id **21** verificato live; `LOGIN_URL` è best-guess, si verifica al primo tentativo con credenziali.
+La prima run (`--skip-publish`, ~30-60 min per ~577 carriere) è stata lanciata ma **l'API SofaScore risponde 403 su TUTTI gli endpoint** (anche `api.sofascore.app`, anche con header browser-like in `C:\Users\Mauro\.config\sofascore-pp-cli\config.toml`): probabile blocco IP temporaneo (il 13/08 funzionava). Riprovare più tardi:
+```powershell
+cd D:\railway\fantacalcio\pipeline
+.venv\Scripts\python -m fantapipe.cli --listone data\listone\listone_gazzetta_2026-08-14.pdf --skip-publish
+```
+Poi: revisione `matching_report.csv` (attesi: i gemelli "OYONO"/"OYONO (2)" al Frosinone, v. README), verifica statistiche di un PORTIERE reale (golSubiti presenti), run con publish e check del raw URL.
 
-### B. Fix parcheggiato scheduler — ⏳ attende ok utente
-`pipeline/run_weekly.ps1`: in PowerShell 5.1, `*>&1 | Tee-Object` con `$ErrorActionPreference="Stop"` trasforma qualsiasi riga stderr in falso "ERRORE" nel log (riprodotto empiricamente). Non tocca i dati. Fix piccolo: separare gli stream o `$ErrorActionPreference="Continue"` attorno all'invocazione, poi allineare la riga di README sul formato dell'ERRORE. (Registrato nel ledger del Piano 1: `.superpowers/sdd/2026-08-12-pipeline-dati/progress.md`.)
+### B. Fix scheduler ✅ (2026-08-14)
+`pipeline/run_weekly.ps1`: il merge stdout/stderr ora lo fa `cmd /c` (PowerShell 5.1 con EAP=Stop trasformava stderr benigno in falso "ERRORE" — riprodotto empiricamente prima e dopo il fix, inclusa la propagazione dei veri exit code ≠ 0).
 
 ### C. Piano 2b — UI completa (da scrivere con writing-plans)
 5 schermate col design curato (skill frontend-design, tema scuro sportivo): Lega (+riparazione), Listone, Strategia (piano budget + target), Asta live (il cuore: bidAdvice, registrazione 2-3 tap, rose avversarie, undo), Riepilogo. Poi APK (EAS build o gradle).
 **Note vincolanti dal triage della final review 2a**: la schermata riparazione deve validare l'over-allocazione del rosterIniziale; il refresh dataset deve esporre un "reason" per l'error surface; riscrivere gli input della Home (bug `parseInt("0")||8`, floor crediti dimensionalmente errato); il Listone 2b deve usare `computeLive` (i prezzi base sono sbagliati in riparazione); sanity: Σ prezzi ≈ monte solo sui giocatori vorp>0.
+**Nota vincolante 2026-08-14 (richiesta utente)**: gli **allenatori sono opzionali per lega** — il dataset ora può contenere la chiave top-level `allenatori` (`[{nome, squadra, qta}]`); la lega deve avere un toggle "usa allenatori" (default off) e solo se attivo l'app mostra/gestisce lo slot allenatore (asta, budget, rosa). `parseDataset` dell'app ignora già le chiavi extra: nessuna migrazione necessaria.
 
 ### D. Varie minori
 - Issue upstream per il CLI printing-press (vedi §2).
@@ -71,7 +75,8 @@ Poi seguire la **"Checklist prima run reale" in `pipeline/README.md`**: run con 
 6. **Priorità suggerita**: sbloccare §3A (serve l'utente) → §3B (un ok) → scrivere ed eseguire il Piano 2b.
 
 ## 5. Gotcha noti
-- API SofaScore: 403 ai client non-browser; passare SEMPRE dal CLI (`--agent`, rate limit 2 req/s; `run_cli` ha spacing 0.35s perché ogni chiamata è un processo nuovo).
+- API SofaScore: 403 ai client non-browser; passare SEMPRE dal CLI (`--agent`, rate limit 2 req/s; `run_cli` ha spacing 0.35s perché ogni chiamata è un processo nuovo). Il 2026-08-14 l'API ha bloccato TUTTO (403 anche via CLI): se ricapita è quasi certamente un blocco IP temporaneo — aspettare e riprovare; gli header custom si configurano in `C:\Users\Mauro\.config\sofascore-pp-cli\config.toml` (`[headers]`).
+- Il listone Gazzetta è un PDF a due colonne: il parser (`listone_gazzetta.py`) legge colonna sinistra poi destra; gli id giocatore sono hash stabili di (ruolo, nome, squadra) — un trasferimento cambia l'id e invalida l'eventuale riga in `matching_overrides.csv`.
 - Il repo è PUBBLICO: mai committare `.env`, credenziali, `pipeline/data/`, `.superpowers/` (già in .gitignore).
 - `generatedAt` si confronta come stringa ISO (ok finché la pipeline emette UTC `isoformat(timespec="seconds")`).
 - GitHub ha avuto 500 transitori sul push il 2026-08-13: se il push fallisce con "Internal Server Error", riprovare dopo qualche minuto.
