@@ -1,5 +1,6 @@
 import { useLeagues } from "../leagues";
 import { useAuctions } from "../auctions";
+import { useStrategy } from "../strategy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { miniDataset } from "../../domain/__tests__/fixtures";
 import type { League, Player } from "../../domain/types";
@@ -39,6 +40,7 @@ const att = ds.players.find(p => p.nome === "AttTop")!;
 beforeEach(() => {
   useLeagues.setState({ leagues: [], activeLeagueId: null });
   useAuctions.setState({ byLeague: {} });
+  useStrategy.setState({ byLeague: {} });
 });
 
 test("useLeagues: le mutazioni sopravvivono a una nuova istanza dello store (crash-safety)", async () => {
@@ -84,4 +86,26 @@ test("useAuctions: gli acquisti sopravvivono a una nuova istanza dello store (cr
   const restored = freshUseAuctions.getState().getAuction("L1");
   expect(restored.purchases).toHaveLength(1);
   expect(restored.purchases[0]).toMatchObject({ playerId: att.id, teamId: "T1", prezzo: 30 });
+});
+
+test("useStrategy: alloc e target sopravvivono a una nuova istanza dello store (crash-safety)", async () => {
+  useStrategy.getState().setAlloc("L1", { P: 50, D: 150, C: 150, A: 150 });
+  useStrategy.getState().addTarget("L1", att.id, 42);
+  await flushMicrotasks();
+
+  const raw = await AsyncStorage.getItem("fanta-strategy");
+  expect(raw).toBeTruthy();
+
+  jest.resetModules();
+  const freshAsyncStorage = require("@react-native-async-storage/async-storage") as {
+    __INTERNAL_MOCK_STORAGE__: Record<string, string>;
+  };
+  freshAsyncStorage.__INTERNAL_MOCK_STORAGE__["fanta-strategy"] = raw!;
+  const { useStrategy: freshUseStrategy } = require("../strategy") as { useStrategy: typeof useStrategy };
+  await freshUseStrategy.persist.rehydrate();
+
+  const restored = freshUseStrategy.getState().getStrategy("L1");
+  expect(restored.alloc).toEqual({ P: 50, D: 150, C: 150, A: 150 });
+  expect(restored.targets).toHaveLength(1);
+  expect(restored.targets[0]).toMatchObject({ playerId: att.id, prezzo: 42 });
 });
