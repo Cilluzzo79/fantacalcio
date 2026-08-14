@@ -83,6 +83,16 @@ def match_players(listone: pd.DataFrame, index: dict, overrides: dict) -> pd.Dat
     # vengono retrocesse a "duplicato" (sofa_id svuotato) cosi' finiscono
     # nel matching_report.csv per revisione manuale.
     not_override = df.match_status != "override"
+
+    # Collisione MISTA override/non-override (deferred del Piano 1): se una
+    # override forza un sofa_id che il fuzzy ha assegnato anche a un'altra
+    # riga, vince la forzatura esplicita dell'utente e la riga fuzzy viene
+    # retrocessa a "duplicato" (report per revisione manuale).
+    override_ids = set(df.loc[~not_override, "sofa_id"].dropna())
+    mixed = not_override & df.sofa_id.isin(override_ids)
+    df.loc[mixed, "sofa_id"] = pd.NA
+    df.loc[mixed, "match_status"] = "duplicato"
+
     dup_counts = df.loc[not_override & df.sofa_id.notna(), "sofa_id"].value_counts()
     for sofa_id in dup_counts[dup_counts > 1].index:
         rows = df[not_override & (df.sofa_id == sofa_id)]

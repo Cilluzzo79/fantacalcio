@@ -118,6 +118,21 @@ def test_duplicate_sofa_id_overrides_never_demoted():
     assert (df.match_status == "override").all()
 
 
+def test_duplicate_sofa_id_misto_override_vince_su_fuzzy():
+    # collisione MISTA: una override forza sofa_id=1 mentre un'altra riga
+    # ci arriva via fuzzy — la forzatura esplicita dell'utente vince e la
+    # riga fuzzy va retrocessa a "duplicato" (finisce nel report)
+    single_index = {"Inter": [{"sofaId": 1, "nome": "Nicolò Barella"}]}
+    df = matching.match_players(
+        _listone([[34, "Barella", "C", "Inter", 28, 120],
+                  [35, "Qualcun Altro", "C", "Inter", 5, 10]]),
+        single_index, {35: 1})
+    ovr = df[df.id == 35].iloc[0]
+    fuzzy = df[df.id == 34].iloc[0]
+    assert ovr.sofa_id == 1 and ovr.match_status == "override"
+    assert pd.isna(fuzzy.sofa_id) and fuzzy.match_status == "duplicato"
+
+
 def test_unambiguous_subset_stays_exact():
     """Regression: unambiguous subset matches (e.g. 'Barella' vs 'Nicolò Barella' alone)
     should still get status 'exact'."""
