@@ -26,7 +26,16 @@ export default function RootLayout() {
       <Stack screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.bg },
-      }} />
+      }}>
+        <Stack.Screen name="player/[id]" options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.text,
+          headerShadowVisible: false,
+          headerTitle: "",
+          headerBackTitle: "",
+        }} />
+      </Stack>
     </>
   );
 }
