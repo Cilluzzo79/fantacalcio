@@ -66,6 +66,24 @@ def test_parse_entries_skips_headers_and_footer():
     assert len(players) == 8
 
 
+def test_parse_entries_sigle_squadra_a_tre_lettere():
+    # Aggiornamento listone 2026-08-15: la Gazzetta e' passata dai nomi
+    # estesi alle sigle (es. "AUDERO COM 1"). La canonizzazione deve dare
+    # la stessa squadra (e quindi lo stesso id sintetico) di prima.
+    players, coaches = parse_entries([
+        "Portieri", "AUDERO COM 1", "MAIGNAN MIL 34",
+        "Difensori", "CARLOS AUGUSTO INT 24",
+        "Allenatori", "CHIVU INT 30",
+    ])
+    by_name = {p["nome"]: p["squadra"] for p in players}
+    assert by_name["AUDERO"] == "Como"
+    assert by_name["MAIGNAN"] == "Milan"
+    assert by_name["CARLOS AUGUSTO"] == "Inter"
+    assert coaches[0]["squadra"] == "Inter"
+    assert stable_id("D", "CARLOS AUGUSTO", "Inter") == \
+        stable_id("D", "CARLOS AUGUSTO", "Inter")  # id invariato per costruzione
+
+
 def test_parse_entries_unknown_team_raises():
     with pytest.raises(GazzettaError, match="sconosciut"):
         parse_entries(["Portieri", "ROSSI Interstellar 5"])

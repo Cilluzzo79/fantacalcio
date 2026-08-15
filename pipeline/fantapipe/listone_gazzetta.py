@@ -23,8 +23,17 @@ SECTION_TO_RUOLO = {"Portieri": "P", "Difensori": "D",
                     "Centrocampisti": "C", "Attaccanti": "A",
                     "Allenatori": "ALL"}
 
-# nomi squadra come compaiono nel PDF -> forma canonica breve
-TEAM_CANON = {"Internazionale": "Inter"}
+# nomi squadra come compaiono nel PDF -> forma canonica breve.
+# Dal 2026-08-15 la Gazzetta usa sigle a 3 lettere: la canonizzazione
+# preserva gli id sintetici (hash su ruolo|nome|squadra canonica).
+TEAM_CANON = {
+    "Internazionale": "Inter",
+    "ATA": "Atalanta", "BOL": "Bologna", "CAG": "Cagliari", "COM": "Como",
+    "FIO": "Fiorentina", "FRO": "Frosinone", "GEN": "Genoa", "INT": "Inter",
+    "JUV": "Juventus", "LAZ": "Lazio", "LEC": "Lecce", "MIL": "Milan",
+    "MON": "Monza", "NAP": "Napoli", "PAR": "Parma", "ROM": "Roma",
+    "SAS": "Sassuolo", "TOR": "Torino", "UDI": "Udinese", "VEN": "Venezia",
+}
 
 KNOWN_TEAMS = ("Atalanta", "Bologna", "Cagliari", "Como", "Fiorentina",
                "Frosinone", "Genoa", "Inter", "Juventus", "Lazio", "Lecce",

@@ -14,11 +14,11 @@ LOGIN_FIELDS = ("username", "password")
 XLSX_MAGIC = b"PK\x03\x04"
 
 # Listone Gazzetta (fantacampionato): PDF pubblico, niente credenziali.
-# Il parametro ?v= è un cache-buster: se Gazzetta pubblica un listone
-# aggiornato con un ?v= diverso, aggiornare qui.
+# SENZA cache-buster ?v=: l'URL base serve sempre l'ultima versione
+# pubblicata (verificato 2026-08-15: il ?v=20260722 inchiodava alla
+# versione di luglio, senza gli arrivi del mercato).
 GAZZETTA_URL = ("https://static2.gazzettaobjects.it/static_images/"
-                "infografiche/FREEMIUM/fantacampionato_listone_26-27.pdf"
-                "?v=20260722")
+                "infografiche/FREEMIUM/fantacampionato_listone_26-27.pdf")
 PDF_MAGIC = b"%PDF"
 
 
