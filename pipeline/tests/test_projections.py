@@ -18,9 +18,10 @@ def test_una_stagione_movimento_calcolo_a_mano():
     p = project([mk(rating=6.95, gol=17, amm=3.4)], "A")
     assert p.voto_proj == pytest.approx(6.0, abs=0.01)
     assert p.fm_proj == pytest.approx(7.45, abs=0.02)
-    # starts_share = 3060/3420 = 0.8947 ; value = 1.45 * 0.8947 * 38 = 49.3
+    # starts_share = 3060/3420 = 0.8947
+    # value = (7.45 - base movimento 5.0) * 0.8947 * 38 = 83.3
     assert p.starts_share == pytest.approx(0.8947, abs=0.001)
-    assert p.value_score == pytest.approx(49.3, abs=0.2)
+    assert p.value_score == pytest.approx(83.3, abs=0.3)
 
 
 def test_recency_pesa_ultima_stagione():
@@ -48,8 +49,27 @@ def test_portiere():
 
 
 def test_value_score_mai_negativo():
-    p = project([mk(rating=5.8, amm=10)], "D")
+    # fm sotto la base di ruolo (voto clampato 5.25, malus cartellini
+    # pesanti -> fm ~4.9 < base D 5.0): il floor a zero deve reggere
+    p = project([mk(rating=5.0, amm=15, esp=3)], "D")
     assert p.value_score == 0.0
+
+
+def test_portiere_titolare_batte_il_fallback_del_terzo():
+    # BUG smoke test 2026-08-15 (De Gea a prezzo 1): con base unica 6.0
+    # ogni portiere reale (fm ~5) veniva appiattito a 0 e superato dal
+    # fallback qta*0.8 dei terzi portieri. Un titolare con numeri sani
+    # deve valere piu' del fallback di un portiere a quotazione 1 (0.8)
+    # e piu' anche di un fallback medio (qta 12 -> 9.6).
+    de_gea = project([mk(rating=7.0, gs=44, cs=11, rp=1, pg=37, minuti=3330)], "P")
+    assert de_gea.value_score > project_from_qta(1, "P").value_score
+    assert de_gea.value_score > project_from_qta(12, "P").value_score
+
+
+def test_portieri_reali_si_differenziano():
+    forte = project([mk(rating=7.2, gs=30, cs=15, rp=2)], "P")
+    debole = project([mk(rating=6.6, gs=55, cs=4, rp=0)], "P")
+    assert forte.value_score > debole.value_score > 0.0
 
 
 def test_fallback_da_quotazione():

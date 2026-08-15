@@ -6,6 +6,17 @@ MIN_PG = 5
 NEUTRAL_RATING = 6.6
 FULL_SEASON_MIN = 3420
 
+# Base fantamedia per il value_score, PER RUOLO. Il "6 politico" vale per i
+# giocatori di movimento, ma un portiere in Classic vive strutturalmente
+# sotto (il -1 a gol subito e' fisiologico, ~1.3 gol/pg): una base unica a
+# 6.0 appiattiva a zero TUTTI i portieri reali, che finivano scavalcati dal
+# fallback qta*0.8 dei terzi portieri (bug scoperto allo smoke test
+# 2026-08-15: De Gea a prezzo 1). La base si cancella nel VORP per ruolo
+# dell'app (repl e' calcolato dentro il ruolo): conta solo che non schiacci
+# le differenze reali. Basi basse quanto serve a non clampare nessun
+# titolare vero.
+VALUE_BASE = {"P": 4.0, "D": 5.0, "C": 5.0, "A": 5.0}
+
 
 @dataclass
 class Projection:
@@ -56,7 +67,7 @@ def project(seasons: list[SeasonStats], ruolo: str) -> Projection:
         share += wi * min(1.0, s.min / FULL_SEASON_MIN)
 
     fm = voto + fm_bonus
-    value = round(max(0.0, fm - 6.0) * share * 38, 1)
+    value = round(max(0.0, fm - VALUE_BASE[ruolo]) * share * 38, 1)
     return Projection(round(voto, 2), round(fm, 2), round(share, 4), value)
 
 
