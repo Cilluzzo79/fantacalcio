@@ -180,6 +180,17 @@ def test_excludes_champions_league_when_enough_league_seasons(tmp_path):
     assert [s.season for s in seasons] == ["25/26", "24/25", "23/24"]
 
 
+def test_supercoppe_una_tantum_escluse_dalla_selezione():
+    # Audit 2026-08-15: "Trophée des Champions" (supercoppa, 1 partita) non
+    # conteneva nessuna keyword e passava come "campionato sconosciuto"
+    # (priorita' 1), occupando lo slot dell'anno al posto del campionato.
+    assert career._priority("Trophée des Champions") == 2
+    assert career._priority("Community Shield") == 2
+    assert career._priority("Supercopa de España") == 2
+    # un campionato sconosciuto vero resta priorita' 1
+    assert career._priority("K League 1") == 1
+
+
 def test_january_transfer_same_year_both_kept(tmp_path):
     # Trasferimento di gennaio: due voci di campionato nello stesso anno
     # solare (Premier League + Serie A, entrambe 25/26) sono entrambe

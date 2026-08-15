@@ -18,9 +18,24 @@ def test_una_stagione_movimento_calcolo_a_mano():
     p = project([mk(rating=6.95, gol=17, amm=3.4)], "A")
     assert p.voto_proj == pytest.approx(6.0, abs=0.01)
     assert p.fm_proj == pytest.approx(7.45, abs=0.02)
-    # starts_share = 3060/3420 = 0.8947
-    # value = (7.45 - base movimento 5.0) * 0.8947 * 38 = 83.3
+    # starts_share = 3060/3420 = 0.8947; shrinkage: 34 pg totali -> lambda
+    # 34/60 = 0.5667; value = (7.45-5.0) * 0.8947 * 0.5667 * 38 = 47.2
     assert p.starts_share == pytest.approx(0.8947, abs=0.001)
+    assert p.value_score == pytest.approx(47.2, abs=0.3)
+
+
+def test_shrinkage_sconta_i_campioni_piccoli():
+    # Audit 2026-08-15 (Mandas a 48 crediti con 20 presenze in carriera):
+    # poche presenze = evidenza debole -> il valore sopra-base si sconta con
+    # lambda = min(1, pg_tot/60).
+    poco = project([mk(rating=7.1, gol=10, pg=20, minuti=1800)], "A")
+    pieno = project([mk(rating=7.1, gol=10, pg=20, minuti=1800)] * 3, "A")
+    assert poco.value_score < pieno.value_score * 0.55
+
+
+def test_shrinkage_nullo_con_campione_pieno():
+    # 3 stagioni piene (102 pg) -> lambda 1, nessuno sconto
+    p = project([mk(rating=6.95, gol=17, amm=3.4)] * 3, "A")
     assert p.value_score == pytest.approx(83.3, abs=0.3)
 
 

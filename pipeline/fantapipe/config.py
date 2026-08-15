@@ -18,12 +18,26 @@ LEAGUE_COEFF = {
     "Liga Portugal Betclic": 0.75, "Primeira Liga": 0.75, "Championship": 0.70,
     "Serie B": 0.65, "Trendyol Süper Lig": 0.70, "Belgian Pro League": 0.72,
     "UEFA Champions League": 1.10, "UEFA Europa League": 0.95,
+    "Serie C": 0.50, "Allsvenskan": 0.60, "Swiss Super League": 0.70,
 }
-LEAGUE_COEFF_DEFAULT = 0.70
+
+# Audit 2026-08-15: i tornei con girone nel nome ("Serie C, Girone C",
+# "Campionato Nazionale Serie D...") non matchavano la tabella e cadevano
+# sul default — che a 0.70 valutava la Serie D come il Championship
+# (Colley del Frosinone da 42 crediti). Match per prefisso + default
+# abbassato a livello "lega minore sconosciuta".
+LEAGUE_COEFF_PREFIX = (("Serie C", 0.50), ("Serie D", 0.35),
+                       ("Campionato Nazionale", 0.35))
+LEAGUE_COEFF_DEFAULT = 0.55
 
 
 def league_coeff(torneo: str) -> float:
-    return LEAGUE_COEFF.get(torneo, LEAGUE_COEFF_DEFAULT)
+    if torneo in LEAGUE_COEFF:
+        return LEAGUE_COEFF[torneo]
+    for prefix, coeff in LEAGUE_COEFF_PREFIX:
+        if torneo.startswith(prefix):
+            return coeff
+    return LEAGUE_COEFF_DEFAULT
 
 
 RECENCY_WEIGHTS = (0.5, 0.3, 0.2)  # stagione più recente per prima

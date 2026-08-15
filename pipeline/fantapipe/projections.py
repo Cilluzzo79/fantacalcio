@@ -27,6 +27,9 @@ VALUE_BASE = {"P": 4.0, "D": 5.0, "C": 5.0, "A": 5.0}
 QTA_SHARE_SLOPE = 30
 QTA_SHARE_CAP = 0.85
 
+# presenze totali (sulle stagioni usate) da cui l'evidenza e' "piena"
+SHRINK_FULL_PG = 60
+
 
 def qta_share(qta: int | None) -> float:
     if qta is None:
@@ -91,7 +94,13 @@ def project(seasons: list[SeasonStats], ruolo: str,
 
     fm = voto + fm_bonus
     share = max(share, qta_share(qta))
-    value = round(max(0.0, fm - VALUE_BASE[ruolo]) * share * 38, 1)
+    # Shrinkage per campioni piccoli (audit 2026-08-15: Mandas a 48 crediti
+    # con 20 presenze in carriera): con poche presenze totali l'evidenza e'
+    # debole e il valore sopra-base va scontato verso il replacement.
+    # lambda = 1 da 60 presenze in su (carriera piena), proporzionale sotto.
+    pg_tot = sum(s.pg for s in usable)
+    lam = min(1.0, pg_tot / SHRINK_FULL_PG)
+    value = round(max(0.0, fm - VALUE_BASE[ruolo]) * lam * share * 38, 1)
     return Projection(round(voto, 2), round(fm, 2), round(share, 4), value)
 
 

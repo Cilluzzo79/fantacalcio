@@ -46,7 +46,11 @@ EXCLUDE_KEYWORDS = ("cup", "copp", "copa", "super cup", "qual", "world cup",
                     "euro", "nations league", "friendl", "champions league",
                     "europa league", "conference league", "olymp", "africa cup",
                     "primavera", "youth", "u19", "u20", "u21", "u23", "reserve",
-                    "junior")
+                    "junior",
+                    # supercoppe una-tantum senza "cup" nel nome (audit
+                    # 2026-08-15: il Trophée des Champions occupava lo slot
+                    # dell'anno come "campionato sconosciuto")
+                    "trophée", "trophee", "community shield")
 
 
 # Fix round 3 post-review (2026-08-13): UEFA Champions League / Europa

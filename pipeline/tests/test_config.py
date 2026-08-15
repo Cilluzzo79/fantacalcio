@@ -1,3 +1,4 @@
+import pytest
 from fantapipe import config
 
 
@@ -13,6 +14,20 @@ def test_league_coeff():
     # torneo sconosciuto -> default prudente
     assert config.league_coeff("K League 1") == config.LEAGUE_COEFF_DEFAULT
     assert 0 < config.LEAGUE_COEFF_DEFAULT < 1
+
+
+def test_league_coeff_leghe_minori_e_gironi():
+    # Audit 2026-08-15: "Serie C, Girone C" non matchava la tabella (nome
+    # con girone) e cadeva sul default 0.70, troppo generoso — Colley
+    # (Serie D) ed equivalenti valevano da titolari di Serie A. Match per
+    # prefisso + default abbassato.
+    assert config.league_coeff("Serie C, Girone C") == pytest.approx(0.50)
+    assert config.league_coeff("Serie D, Girone A") == pytest.approx(0.35)
+    assert config.league_coeff("Campionato Nazionale Serie D") == pytest.approx(0.35)
+    assert config.league_coeff("Allsvenskan") == pytest.approx(0.60)
+    assert config.LEAGUE_COEFF_DEFAULT == pytest.approx(0.55)
+    # la Serie B esplicita resta invariata
+    assert config.league_coeff("Serie B") == pytest.approx(0.65)
 
 
 def test_rating_to_voto():
