@@ -17,6 +17,22 @@ FULL_SEASON_MIN = 3420
 # titolare vero.
 VALUE_BASE = {"P": 4.0, "D": 5.0, "C": 5.0, "A": 5.0}
 
+# Titolarita' attesa dalla quotazione Gazzetta (proxy delle "gerarchie di
+# squadra", spec 5.A.2): la qta incorpora l'aspettativa di ruolo per la
+# stagione che VIENE, mentre i minuti storici guardano indietro — un
+# titolare atteso reduce da stagioni in rotazione (Simeone qta 57, share
+# storica 0.42) veniva prezzato 1 (bug smoke test 2026-08-15). La share
+# attesa non scende mai sotto min(QTA_SHARE_CAP, qta/QTA_SHARE_SLOPE) e
+# non supera mai la storica se questa e' migliore.
+QTA_SHARE_SLOPE = 30
+QTA_SHARE_CAP = 0.85
+
+
+def qta_share(qta: int | None) -> float:
+    if qta is None:
+        return 0.0
+    return min(QTA_SHARE_CAP, qta / QTA_SHARE_SLOPE)
+
 
 @dataclass
 class Projection:
@@ -32,7 +48,8 @@ def _weights(n: int) -> list[float]:
     return [w / tot for w in raw]
 
 
-def project(seasons: list[SeasonStats], ruolo: str) -> Projection:
+def project(seasons: list[SeasonStats], ruolo: str,
+            qta: int | None = None) -> Projection:
     usable = [s for s in seasons if s.pg >= MIN_PG]
     if ruolo == "P":
         # Un portiere con presenze ma senza gol_subiti e' un buco nei dati
@@ -67,6 +84,7 @@ def project(seasons: list[SeasonStats], ruolo: str) -> Projection:
         share += wi * min(1.0, s.min / FULL_SEASON_MIN)
 
     fm = voto + fm_bonus
+    share = max(share, qta_share(qta))
     value = round(max(0.0, fm - VALUE_BASE[ruolo]) * share * 38, 1)
     return Projection(round(voto, 2), round(fm, 2), round(share, 4), value)
 

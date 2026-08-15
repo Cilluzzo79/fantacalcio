@@ -21,7 +21,7 @@ def build_dataset(matched_df: pd.DataFrame, careers: dict, season_label: str,
         sofa_id = None if pd.isna(r.sofa_id) else int(r.sofa_id)
         seasons = careers.get(sofa_id, []) if sofa_id else []
         try:
-            proj = project(seasons, r.ruolo)
+            proj = project(seasons, r.ruolo, qta=int(r.qta))
         except ValueError:
             proj = project_from_qta(r.qta, r.ruolo)
             seasons = []

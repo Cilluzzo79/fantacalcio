@@ -72,6 +72,34 @@ def test_portieri_reali_si_differenziano():
     assert forte.value_score > debole.value_score > 0.0
 
 
+def test_qta_alza_la_titolarita_attesa_dei_nuovi_titolari():
+    # BUG smoke test 2026-08-15 (Simeone qta 57 a prezzo 1): il modello
+    # proiettava la titolarita' SOLO dai minuti storici, azzerando i
+    # titolari attesi reduci da stagioni in rotazione. La qta Gazzetta fa
+    # da proxy delle "gerarchie di squadra" (spec 5.A.2): share attesa =
+    # max(storica, min(0.85, qta/30)).
+    rotazione = [mk(rating=6.9, gol=8, pg=25, minuti=1400)]
+    con_qta = project(rotazione, "A", qta=57)
+    senza_qta = project(rotazione, "A")
+    assert con_qta.starts_share == pytest.approx(0.85, abs=0.001)
+    assert con_qta.value_score > senza_qta.value_score
+
+
+def test_qta_bassa_non_gonfia_le_riserve():
+    riserva = [mk(rating=6.6, pg=10, minuti=500)]
+    con = project(riserva, "D", qta=1)
+    senza = project(riserva, "D")
+    assert con.value_score == pytest.approx(senza.value_score)
+    assert con.starts_share == pytest.approx(senza.starts_share)
+
+
+def test_qta_non_abbassa_mai_la_titolarita_storica():
+    titolare = [mk(rating=7.0, pg=36, minuti=3300)]
+    con = project(titolare, "C", qta=6)
+    senza = project(titolare, "C")
+    assert con.starts_share == pytest.approx(senza.starts_share)
+
+
 def test_fallback_da_quotazione():
     p = project_from_qta(20, "A")
     assert p.value_score == pytest.approx(16.0)
