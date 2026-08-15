@@ -66,6 +66,21 @@ def test_portiere_titolare_batte_il_fallback_del_terzo():
     assert de_gea.value_score > project_from_qta(12, "P").value_score
 
 
+def test_stats_portiere_riscalate_per_coefficiente_di_lega():
+    # BUG smoke test 2026-08-15 (Thiam, Monza da Serie B, valutato sopra
+    # De Gea): il rating veniva riscalato per la lega ma gol subiti, clean
+    # sheet e rigori parati NO — 0.84 gs/pg in Serie B contati come Serie A.
+    # Attesi in Serie A: gs/coeff (piu' gol subiti), cs*coeff e rp*coeff
+    # (meno clean sheet e parate). Stessi numeri grezzi, lega piu' debole
+    # -> valore nettamente inferiore.
+    in_serie_a = project([mk(rating=7.1, gs=32, cs=16, rp=1, pg=38,
+                             minuti=3420)], "P")
+    in_serie_b = project([mk(rating=7.1, gs=32, cs=16, rp=1, pg=38,
+                             minuti=3420, coeff=0.65, torneo="Serie B")], "P")
+    assert in_serie_b.fm_proj < in_serie_a.fm_proj - 0.4
+    assert in_serie_b.value_score < in_serie_a.value_score * 0.75
+
+
 def test_portieri_reali_si_differenziano():
     forte = project([mk(rating=7.2, gs=30, cs=15, rp=2)], "P")
     debole = project([mk(rating=6.6, gs=55, cs=4, rp=0)], "P")

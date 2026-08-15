@@ -70,9 +70,15 @@ def project(seasons: list[SeasonStats], ruolo: str,
         voto += wi * config.rating_to_voto(rating_adj)
         pg = max(1, s.pg)
         if ruolo == "P":
-            gs = (s.gol_subiti or 0) / pg
-            cs = (s.clean_sheet or 0) / pg
-            rp = (s.rig_parati or 0) / pg
+            # Anche le stats del portiere vanno riscalate per la lega (come
+            # gol/assist dei giocatori di movimento): subire 0.84 gol/pg in
+            # Serie B ~ subirne 0.84/coeff in Serie A; clean sheet e rigori
+            # parati attesi scendono col coeff. Senza questo, un portiere
+            # di Serie B brillante scavalcava i titolari di Serie A (bug
+            # Thiam, smoke test 2026-08-15).
+            gs = (s.gol_subiti or 0) / pg / s.coeff
+            cs = (s.clean_sheet or 0) / pg * s.coeff
+            rp = (s.rig_parati or 0) / pg * s.coeff
             fm_bonus += wi * (config.BONUS["gol_subito"] * gs
                               + config.BONUS["clean_sheet"] * cs
                               + config.BONUS["rig_parato"] * rp)
